@@ -1758,6 +1758,7 @@ async function exportOwnershipPackage(id) {
 document.body.addEventListener('click', async (e) => {
   const t = e.target.closest('[data-action]'); if (!t) return;
   const action = t.dataset.action, id = t.dataset.id, value = t.dataset.value, idx = t.dataset.idx;
+  try {
 
   if (action.startsWith('nav:')) { const s = action.split(':')[1]; navigate(s==='create'?'create':s); return; }
   if (action === 'go:record') { navigate('record'); doStartRecording(); return; }
@@ -1888,6 +1889,10 @@ document.body.addEventListener('click', async (e) => {
     closeModal(); saveMelody();
     setTimeout(() => { const p = App.pendingNav; App.pendingNav=null; if (p && p.fromPopstate) history.back(); else if (p) doNavigate(p.screen, p.params, p.replace); }, 50);
     return;
+  }
+  } catch (err) {
+    console.error('HumTune action failed:', action, err);
+    toast('Something went wrong with that action — please try again.');
   }
 });
 
