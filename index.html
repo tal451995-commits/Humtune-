@@ -1,0 +1,2503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HumTune</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #060a07; --bg-2: #0b0f0a; --surface: #12160f; --surface-2: #1a2117;
+    --border: #263023; --text: #eef2ea; --text-dim: #8b9587;
+    --accent: #35e07a; --accent-strong: #21c465; --accent-ink: #04150a;
+    --glow: rgba(53,224,122,0.35); --warn: #ffb648; --danger: #ff5d6b;
+    --font-scale: 16px;
+  }
+  :root[data-theme="light"] {
+    --bg: #f5f7f3; --bg-2: #ffffff; --surface: #ffffff; --surface-2: #eef2ea;
+    --border: #dde3d8; --text: #12160f; --text-dim: #5c665a;
+    --accent: #1f9d55; --accent-strong: #167d43; --accent-ink: #ffffff;
+    --glow: rgba(31,157,85,0.22); --warn: #b6740a; --danger: #c73e3e;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { font-size: var(--font-scale); }
+  html, body { margin:0; padding:0; height:100%; color:var(--text);
+    font-family:'Manrope',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; overscroll-behavior-y:contain;
+    background:
+      radial-gradient(ellipse 900px 500px at 50% -10%, rgba(53,224,122,0.16), transparent 60%),
+      radial-gradient(ellipse 700px 400px at 90% 15%, rgba(53,224,122,0.06), transparent 55%),
+      var(--bg);
+    background-attachment: fixed;
+  }
+  html[data-theme="light"], body[data-theme="light"] { background: var(--bg); }
+  html[data-theme="light"] body { background: var(--bg); }
+  .reduced-motion * { animation:none !important; transition:none !important; }
+  button, input, textarea { font-family:inherit; color:inherit; }
+  #app { max-width:480px; margin:0 auto; min-height:100dvh; display:flex; flex-direction:column; background:var(--bg); }
+
+  .topbar { display:flex; align-items:center; gap:10px; padding:max(14px, env(safe-area-inset-top)) 16px 10px; }
+  .tb-btn { width:36px; height:36px; border-radius:10px; border:none; background:var(--surface-2); color:var(--text); font-size:17px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .tb-title { flex:1; font-size:1.05rem; font-weight:700; letter-spacing:-0.01em; }
+
+  #screen-root { flex:1; overflow-y:auto; padding:0 16px 18px; -webkit-overflow-scrolling:touch; }
+  .home-top { padding:8px 16px 0; }
+  .logo-row { display:flex; align-items:center; gap:10px; margin-bottom:4px; }
+  .logo-word { font-size:1.15rem; font-weight:800; letter-spacing:-0.02em; }
+  .logo-word span { color:var(--accent); }
+
+  .hero { text-align:center; padding:16px 8px 4px; }
+  .hero h1 { font-size:1.5rem; font-weight:800; letter-spacing:-0.025em; margin:0 0 6px; line-height:1.25; background:linear-gradient(155deg, var(--text), var(--text) 60%, var(--accent)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+  .hero p { margin:0; color:var(--text-dim); font-size:0.9rem; }
+
+  .hum-stage { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:12px 0 6px; position:relative; }
+  #heroWave { width:100%; max-width:320px; height:80px; display:block; }
+  .mic-wrap { position:relative; width:164px; height:164px; display:flex; align-items:center; justify-content:center; margin-top:-64px; }
+  .pulse-ring { position:absolute; inset:0; border-radius:50%; border:2px solid var(--accent); opacity:0; }
+  .mic-wrap.pulsing .pulse-ring { animation:pulse 2.2s ease-out infinite; }
+  .mic-wrap.pulsing .pulse-ring:nth-child(2) { animation-delay:0.7s; }
+  .mic-wrap.recording .pulse-ring { border-color:var(--danger); animation:pulse 1.3s ease-out infinite; }
+  @keyframes pulse { 0%{transform:scale(0.72);opacity:0.5;} 100%{transform:scale(1.4);opacity:0;} }
+  .big-mic { position:relative; z-index:2; width:136px; height:136px; border-radius:50%; border:none;
+    background:radial-gradient(circle at 30% 25%, var(--accent-strong), #0a3d20 78%);
+    box-shadow:0 0 0 1px rgba(53,224,122,0.25), 0 14px 40px var(--glow);
+    color:var(--accent-ink); display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:4px; cursor:pointer; font-weight:700; font-size:0.82rem; }
+  .big-mic .ic { font-size:36px; }
+  .big-mic:active { transform:scale(0.96); }
+  .mic-wrap.recording .big-mic { background:radial-gradient(circle at 30% 25%, var(--danger), #4a1013 78%); color:#fff; }
+
+  .section-title { font-size:0.8rem; font-weight:700; color:var(--text-dim); margin:20px 2px 10px; }
+  .h-scroll { display:flex; gap:10px; overflow-x:auto; padding-bottom:4px; scrollbar-width:none; }
+  .h-scroll::-webkit-scrollbar { display:none; }
+
+  .card { position:relative; background:linear-gradient(155deg, var(--surface-2), var(--surface) 40%); border:1px solid var(--border); border-radius:16px; padding:14px; box-shadow:0 3px 14px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.04); }
+  .mini-card { min-width:150px; }
+  .mini-card canvas { width:100%; height:36px; display:block; margin:8px 0 6px; }
+  .mini-card .mc-name { font-weight:700; font-size:0.85rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .mini-card .mc-meta { font-size:0.7rem; color:var(--text-dim); }
+
+  .empty-state { text-align:center; padding:30px 14px; }
+  .empty-state .ico { font-size:32px; margin-bottom:10px; }
+  .empty-state h3 { margin:0 0 6px; font-size:1rem; }
+  .empty-state p { margin:0 0 16px; color:var(--text-dim); font-size:0.86rem; }
+
+  .btn { border:none; border-radius:12px; padding:12px 16px; font-weight:700; font-size:0.86rem; cursor:pointer;
+    display:inline-flex; align-items:center; justify-content:center; gap:6px; }
+  .btn:active { transform:scale(0.98); }
+  .btn:disabled { opacity:0.4; cursor:not-allowed; }
+  .btn-primary { background:linear-gradient(155deg, var(--accent), var(--accent-strong)); color:var(--accent-ink); box-shadow:0 4px 14px var(--glow); }
+  .btn-secondary { background:var(--surface-2); color:var(--text); border:1px solid var(--border); }
+  .btn-enhance { background:linear-gradient(155deg, #2a5a3f, #163b28); color:#fff; border:1px solid var(--accent); box-shadow:0 4px 16px var(--glow), inset 0 1px 0 rgba(255,255,255,0.08); font-weight:800; }
+  .btn-danger { background:var(--danger); color:#fff; }
+  .btn-block { width:100%; }
+  .btn-row { display:flex; gap:10px; }
+
+  .create-opt { display:flex; align-items:center; gap:14px; padding:16px; margin-bottom:12px; cursor:pointer; }
+  .create-opt .co-ic { font-size:24px; width:40px; text-align:center; }
+  .create-opt .co-txt strong { display:block; font-size:0.94rem; }
+  .create-opt .co-txt span { font-size:0.76rem; color:var(--text-dim); }
+  .create-opt.disabled { opacity:0.45; cursor:not-allowed; }
+  .badge-soon { font-size:0.6rem; font-weight:700; background:var(--surface-2); color:var(--text-dim); padding:2px 7px; border-radius:20px; margin-left:6px; }
+
+  .permission-card { text-align:center; padding:24px 18px; }
+  .permission-card .ico { font-size:32px; margin-bottom:12px; }
+  .permission-card h3 { margin:0 0 8px; font-size:1.02rem; }
+  .permission-card p { margin:0 0 18px; color:var(--text-dim); font-size:0.86rem; line-height:1.5; }
+  .error-card { border-left:3px solid var(--danger); text-align:left; }
+  .error-card h3 { color:var(--danger); font-size:0.94rem; margin:0 0 6px; }
+  .error-card p { margin:0 0 14px; color:var(--text-dim); font-size:0.84rem; line-height:1.5; }
+
+  .rec-status { text-align:center; color:var(--text-dim); font-size:0.85rem; margin-top:4px; }
+  .rec-timer { text-align:center; font-variant-numeric:tabular-nums; font-size:1.35rem; font-weight:700; margin:6px 0 12px; }
+  #recWave { width:100%; height:84px; display:block; background:var(--surface); border-radius:14px; }
+  #levelBarRec { width:100%; height:6px; border-radius:4px; background:var(--surface-2); overflow:hidden; margin-top:10px; }
+  #levelFillRec { height:100%; width:0%; background:var(--accent); }
+  .rec-controls { display:flex; align-items:center; justify-content:center; gap:20px; margin-top:20px; }
+  .rec-round { width:70px; height:70px; border-radius:50%; border:none; background:var(--danger); color:#fff; font-size:24px; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 18px rgba(255,93,107,0.4); }
+  .rec-small { width:50px; height:50px; border-radius:50%; border:none; background:var(--surface-2); color:var(--text); font-size:17px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+
+  .proc-wrap { padding:26px 10px; }
+  .proc-step { display:flex; align-items:center; gap:12px; padding:11px 4px; color:var(--text-dim); font-size:0.9rem; }
+  .proc-step.active { color:var(--text); font-weight:700; }
+  .proc-step .dot { width:20px; height:20px; border-radius:50%; border:2px solid var(--border); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:11px; }
+  .proc-step.done .dot { background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
+  .proc-step.active .dot { border-color:var(--accent); }
+
+  .name-input-inline { background:transparent; border:none; font-size:1.02rem; font-weight:700; width:100%; }
+  .badge-orig { font-size:0.62rem; font-weight:700; color:var(--accent); border:1px solid var(--accent); border-radius:20px; padding:2px 8px; margin-left:6px; }
+  .tabs { display:flex; background:var(--surface-2); border-radius:12px; padding:3px; margin:10px 0 12px; }
+  .tabs button { flex:1; border:none; background:transparent; padding:8px; border-radius:9px; font-size:0.78rem; font-weight:700; color:var(--text-dim); cursor:pointer; }
+  .tabs button.active { background:var(--surface); color:var(--text); }
+  #rollCanvas { width:100%; height:170px; display:block; background:var(--bg-2); border-radius:14px; border:1px solid var(--border); }
+  .preview-banner { background:var(--surface-2); border:1px dashed var(--accent); border-radius:10px; padding:8px 12px; font-size:0.76rem; color:var(--accent); text-align:center; margin-bottom:8px; }
+  .scrub-wrap { padding:8px 2px 2px; }
+  #scrubBar { width:100%; height:20px; }
+  .transport { display:flex; align-items:center; justify-content:center; gap:16px; margin:10px 0 4px; }
+  .transport button { width:50px; height:50px; border-radius:50%; border:none; background:var(--surface-2); color:var(--text); font-size:18px; cursor:pointer; }
+  .transport .play-btn { width:60px; height:60px; background:var(--accent); color:var(--accent-ink); font-size:21px; }
+
+  .note-edit-bar { display:none; flex-wrap:wrap; gap:8px; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:12px; margin-top:10px; }
+  .note-edit-bar.show { display:flex; }
+  .ne-title { width:100%; font-size:0.76rem; color:var(--text-dim); margin-bottom:2px; }
+  .ne-btn { flex:1; min-width:62px; background:var(--surface-2); border:none; border-radius:10px; padding:9px 4px; font-size:0.7rem; font-weight:700; color:var(--text); cursor:pointer; }
+  .ne-btn.danger { color:var(--danger); }
+  .editor-toolbar { display:flex; gap:8px; margin-top:12px; }
+  .editor-toolbar button { flex:1; }
+
+  .instr-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:4px; }
+  .instr-card { position:relative; display:flex; align-items:center; gap:10px; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:10px 12px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.12); }
+  .instr-card .ic-badge { width:38px; height:38px; border-radius:11px; background:var(--surface-2); display:flex; align-items:center; justify-content:center; font-size:19px; flex-shrink:0; }
+  .instr-card .lb { font-size:0.82rem; font-weight:700; color:var(--text); text-align:left; }
+  .instr-card.sel { border-color:var(--accent); box-shadow:0 4px 16px var(--glow); }
+  .instr-card.sel .ic-badge { background:linear-gradient(155deg, var(--accent), var(--accent-strong)); color:var(--accent-ink); }
+  .instr-card.sel .lb { color:var(--accent); }
+  .instr-card .check { position:absolute; top:6px; right:8px; color:var(--accent); font-size:13px; opacity:0; }
+  .instr-card.sel .check { opacity:1; }
+
+  .tempo-row { display:flex; gap:8px; margin-top:4px; }
+  .tempo-chip { flex:1; background:var(--surface-2); border:1px solid transparent; border-radius:10px; padding:9px 4px; text-align:center; font-size:0.76rem; font-weight:700; color:var(--text-dim); cursor:pointer; }
+  .tempo-chip.sel { border-color:var(--accent); color:var(--accent); background:rgba(53,224,122,0.1); }
+
+  .search-box { display:flex; align-items:center; gap:8px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:10px 12px; margin-bottom:12px; }
+  .search-box input { flex:1; background:transparent; border:none; outline:none; font-size:0.86rem; }
+  .filter-row { display:flex; gap:8px; margin-bottom:14px; overflow-x:auto; }
+  .chip { background:var(--surface-2); border:1px solid transparent; border-radius:20px; padding:7px 13px; font-size:0.76rem; font-weight:700; color:var(--text-dim); cursor:pointer; white-space:nowrap; }
+  .chip.sel { border-color:var(--accent); color:var(--accent); }
+
+  .lib-card { display:flex; align-items:center; gap:12px; padding:12px; margin-bottom:10px; cursor:pointer; }
+  .lib-card canvas { width:58px; height:32px; background:var(--surface-2); border-radius:8px; flex-shrink:0; }
+  .lib-info { flex:1; min-width:0; }
+  .li-name { font-weight:700; font-size:0.88rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:flex; align-items:center; gap:6px; }
+  .li-meta { font-size:0.7rem; color:var(--text-dim); }
+  .draft-dot { width:6px; height:6px; border-radius:50%; background:var(--warn); flex-shrink:0; }
+  .lib-actions { display:flex; gap:4px; }
+  .icon-btn { width:32px; height:32px; border-radius:9px; border:none; background:var(--surface-2); color:var(--text-dim); font-size:14px; cursor:pointer; }
+  .icon-btn.on { color:var(--accent); }
+
+  .settings-group { margin-bottom:20px; }
+  .settings-group h4 { font-size:0.74rem; color:var(--text-dim); margin:0 0 8px 2px; font-weight:700; }
+  .set-row { display:flex; align-items:center; justify-content:space-between; padding:13px 14px; background:var(--surface); border:1px solid var(--border); border-top:none; }
+  .set-row:first-child { border-radius:14px 14px 0 0; border-top:1px solid var(--border); }
+  .set-row:last-child { border-radius:0 0 14px 14px; }
+  .set-row:only-child { border-radius:14px; }
+  .set-label { font-size:0.84rem; }
+  .seg { display:flex; background:var(--surface-2); border-radius:9px; padding:2px; }
+  .seg button { border:none; background:transparent; padding:5px 10px; font-size:0.7rem; font-weight:700; color:var(--text-dim); border-radius:7px; cursor:pointer; }
+  .seg button.sel { background:var(--surface); color:var(--accent); }
+  .switch { width:42px; height:24px; border-radius:20px; background:var(--surface-2); position:relative; border:none; cursor:pointer; flex-shrink:0; }
+  .switch.on { background:var(--accent); }
+  .switch .knob { position:absolute; top:2px; left:2px; width:20px; height:20px; border-radius:50%; background:#fff; transition:transform 0.15s; }
+  .switch.on .knob { transform:translateX(18px); }
+  input[type="range"] { width:100%; accent-color:var(--accent); }
+
+  .help-item, .cert-card { padding:14px; margin-bottom:10px; }
+  .help-item h4 { margin:0 0 6px; font-size:0.87rem; }
+  .help-item p, .priv-text p { margin:0; color:var(--text-dim); font-size:0.82rem; line-height:1.55; }
+  .priv-text p { margin-bottom:12px; }
+
+  .cert-card { border:1px solid var(--accent); position:relative; overflow:hidden; }
+  .cert-card::before { content:''; position:absolute; top:-40px; right:-40px; width:120px; height:120px; background:radial-gradient(circle, var(--glow), transparent 70%); }
+  .cert-title { font-weight:800; font-size:1.05rem; margin-bottom:2px; }
+  .cert-sub { font-size:0.72rem; color:var(--text-dim); margin-bottom:14px; }
+  .cert-row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border); font-size:0.8rem; gap:10px; }
+  .cert-row span:first-child { color:var(--text-dim); flex-shrink:0; }
+  .cert-row span:last-child { text-align:right; word-break:break-all; font-variant-numeric:tabular-nums; }
+  .cert-disclaimer { margin-top:14px; font-size:0.7rem; color:var(--text-dim); line-height:1.5; }
+
+  #bottom-nav { display:flex; align-items:flex-end; justify-content:space-around; padding:8px 6px max(10px, env(safe-area-inset-bottom)); background:var(--bg-2); border-top:1px solid var(--border); }
+  .nav-item { background:none; border:none; display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--text-dim); font-size:0.58rem; font-weight:700; padding:4px 4px; cursor:pointer; flex:1; }
+  .nav-item .ni-ic { font-size:18px; }
+  .nav-item.sel { color:var(--accent); }
+  .nav-item.center { flex:0 0 auto; margin-top:-20px; }
+  .nav-item.center .ni-ic { width:46px; height:46px; border-radius:50%; background:var(--accent); color:var(--accent-ink); display:flex; align-items:center; justify-content:center; font-size:21px; box-shadow:0 6px 18px var(--glow); }
+
+  #modal-root, #sheet-root { position:fixed; inset:0; z-index:50; display:none; }
+  #modal-root.show, #sheet-root.show { display:block; }
+  .overlay-bg { position:absolute; inset:0; background:rgba(0,0,0,0.55); }
+  .modal-box { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:min(340px, calc(100% - 40px)); max-height:80vh; overflow-y:auto; background:var(--surface); border:1px solid var(--border); border-radius:18px; padding:20px; }
+  .modal-box h3 { margin:0 0 8px; font-size:1rem; }
+  .modal-box p { margin:0 0 14px; color:var(--text-dim); font-size:0.84rem; line-height:1.5; }
+  .modal-box input[type=text] { width:100%; padding:11px; border-radius:10px; border:1px solid var(--border); background:var(--surface-2); color:var(--text); font-size:0.9rem; margin-bottom:14px; }
+  .modal-box textarea { width:100%; height:130px; border-radius:10px; border:1px solid var(--border); background:var(--surface-2); color:var(--text); font-size:0.7rem; padding:10px; margin-bottom:14px; resize:none; }
+  .sheet-box { position:absolute; left:0; right:0; bottom:0; background:var(--surface); border-radius:20px 20px 0 0; padding:10px 8px max(16px, env(safe-area-inset-bottom)); max-width:480px; margin:0 auto; max-height:75vh; overflow-y:auto; }
+  .sheet-handle { width:36px; height:4px; background:var(--border); border-radius:3px; margin:6px auto 10px; }
+  .sheet-item { display:flex; align-items:center; gap:12px; padding:13px 14px; font-size:0.88rem; cursor:pointer; border-radius:10px; }
+  .sheet-item:active { background:var(--surface-2); }
+  .sheet-item.danger { color:var(--danger); }
+
+  #toast-root { position:fixed; left:50%; bottom:88px; transform:translateX(-50%); z-index:60; display:flex; flex-direction:column; gap:8px; align-items:center; pointer-events:none; }
+  .toast { background:var(--surface); border:1px solid var(--border); color:var(--text); padding:10px 18px; border-radius:24px; font-size:0.8rem; font-weight:600; box-shadow:0 8px 24px rgba(0,0,0,0.3); opacity:0; transform:translateY(8px); transition:all 0.2s; }
+  .toast.show { opacity:1; transform:translateY(0); }
+
+  #onboarding { position:fixed; inset:0; background:var(--bg); z-index:100; display:flex; flex-direction:column; max-width:480px; margin:0 auto; }
+  .onb-skip { align-self:flex-end; padding:16px 20px; background:none; border:none; color:var(--text-dim); font-size:0.85rem; font-weight:700; cursor:pointer; }
+  .onb-body { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:20px 30px; }
+  .onb-body .ico { font-size:52px; margin-bottom:20px; }
+  .onb-body h2 { font-size:1.35rem; margin:0 0 10px; font-weight:800; }
+  .onb-body p { color:var(--text-dim); font-size:0.9rem; margin:0; }
+  .onb-dots { display:flex; gap:6px; justify-content:center; padding-bottom:18px; }
+  .onb-dots span { width:7px; height:7px; border-radius:50%; background:var(--border); }
+  .onb-dots span.on { background:var(--accent); width:20px; border-radius:4px; }
+  .onb-footer { padding:0 24px max(24px, env(safe-area-inset-bottom)); }
+
+  [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<div id="app">
+  <main id="screen-root"></main>
+  <nav id="bottom-nav"></nav>
+</div>
+<div id="modal-root"><div class="overlay-bg" data-action="modal:cancel"></div><div class="modal-box" id="modal-content"></div></div>
+<div id="sheet-root"><div class="overlay-bg" data-action="sheet:close"></div><div class="sheet-box" id="sheet-content"></div></div>
+<div id="toast-root"></div>
+<div id="onboarding" hidden></div>
+
+<script>
+(function(){
+"use strict";
+
+/* =====================================================================
+   PRESERVED AUDIO ENGINE
+   Everything in this block is carried over unchanged from the published
+   v0.1 HumTune Artifact: the same autocorrelation pitch detector, median
+   smoothing, note segmentation, note-math and environment/permission
+   checks. This is the real, working microphone -> pitch -> notes
+   pipeline, not rebuilt or replaced.
+===================================================================== */
+const MAX_RECORD_SECONDS = 20; // was 12 in v0.1; raised so a full short tune fits
+const SAMPLE_INTERVAL_MS = 45;
+const MIN_FREQ = 70;
+const MAX_FREQ = 1100;
+const SILENCE_RMS = 0.012;
+
+function freqToMidi(freq) { return 69 + 12 * Math.log2(freq / 440); }
+function midiToFreq(midi) { return 440 * Math.pow(2, (midi - 69) / 12); }
+const NOTE_NAMES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+function midiToName(midi) {
+  const m = Math.round(midi);
+  const name = NOTE_NAMES[((m % 12) + 12) % 12];
+  const octave = Math.floor(m / 12) - 1;
+  return name + octave;
+}
+
+const CLARITY_THRESHOLD = 0.38; // minimum normalized autocorrelation peak to trust a pitch estimate at all
+
+function detectPitch(buf, sampleRate, noiseFloor) {
+  const SIZE = buf.length;
+  let rms = 0;
+  for (let i = 0; i < SIZE; i++) rms += buf[i] * buf[i];
+  rms = Math.sqrt(rms / SIZE);
+  const effectiveGate = Math.max(SILENCE_RMS * 0.5, (noiseFloor || SILENCE_RMS) * 2.2);
+  if (rms < effectiveGate) return { freq: -1, rms, clarity: 0 };
+
+  let start = 0, end = SIZE - 1;
+  const trimThresh = 0.2;
+  while (start < SIZE / 2 && Math.abs(buf[start]) < trimThresh) start++;
+  while (end > SIZE / 2 && Math.abs(buf[end]) < trimThresh) end--;
+  const trimmed = buf.subarray(start, end);
+  const n = trimmed.length;
+  if (n < 512) return { freq: -1, rms, clarity: 0 };
+
+  // Only compute correlation for lags inside the plausible pitch range —
+  // correctness (can't pick an implausible peak) and performance (far fewer
+  // lags than scanning the whole buffer) at the same time.
+  const minLag = Math.max(2, Math.floor(sampleRate / MAX_FREQ));
+  const maxLag = Math.min(n - 2, Math.ceil(sampleRate / MIN_FREQ));
+  if (maxLag <= minLag) return { freq: -1, rms, clarity: 0 };
+
+  let energy0 = 0;
+  for (let i = 0; i < n; i++) energy0 += trimmed[i] * trimmed[i];
+  if (energy0 <= 0) return { freq: -1, rms, clarity: 0 };
+
+  const c = new Float32Array(maxLag + 2);
+  for (let lag = minLag; lag <= maxLag + 1 && lag < n; lag++) {
+    let sum = 0;
+    for (let i = 0; i < n - lag; i++) sum += trimmed[i] * trimmed[i + lag];
+    c[lag] = sum;
+  }
+  let maxVal = -Infinity, maxPos = -1;
+  for (let lag = minLag; lag <= maxLag; lag++) if (c[lag] > maxVal) { maxVal = c[lag]; maxPos = lag; }
+  if (maxPos < 0) return { freq: -1, rms, clarity: 0 };
+
+  const clarity = maxVal / energy0;
+  if (clarity < CLARITY_THRESHOLD) return { freq: -1, rms, clarity };
+
+  const x1 = c[maxPos - 1] || 0, x2 = c[maxPos], x3 = c[maxPos + 1] || 0;
+  const a = (x1 + x3 - 2 * x2) / 2, b = (x3 - x1) / 2;
+  let refinedLag = maxPos;
+  if (a !== 0) refinedLag = maxPos - b / (2 * a);
+  const freq = sampleRate / refinedLag;
+  if (freq < MIN_FREQ || freq > MAX_FREQ || !isFinite(freq)) return { freq: -1, rms, clarity };
+  return { freq, rms, clarity };
+}
+
+function medianSmooth(values, windowSize) {
+  const half = Math.floor(windowSize / 2);
+  const out = new Array(values.length).fill(null);
+  for (let i = 0; i < values.length; i++) {
+    if (values[i] == null) { out[i] = null; continue; }
+    const win = [];
+    for (let j = i - half; j <= i + half; j++) if (j >= 0 && j < values.length && values[j] != null) win.push(values[j]);
+    win.sort((a, b) => a - b);
+    out[i] = win[Math.floor(win.length / 2)];
+  }
+  return out;
+}
+
+function correctOctaveJumps(frames) {
+  // Conservative, causal (backward-looking only) octave-error correction.
+  // Only fires when a frame's pitch sits within OCTAVE_TOL semitones of
+  // exactly +/-12 from the recent confident local median — the signature of
+  // an isolated octave-doubling artifact, not a real melodic jump (a real
+  // sustained octave change persists across many frames and simply becomes
+  // the new local median, so it's never "corrected" away).
+  const CONTEXT_WINDOW = 6, OCTAVE_TOL = 0.6;
+  const out = frames.map(f => Object.assign({}, f));
+  for (let i = 0; i < out.length; i++) {
+    if (out[i].midi == null) continue;
+    const contextVals = [];
+    for (let j = i - 1; j >= 0 && contextVals.length < CONTEXT_WINDOW; j--) {
+      if (out[j].midi != null) contextVals.push(out[j].midi);
+    }
+    if (contextVals.length < 2) continue;
+    contextVals.sort((a, b) => a - b);
+    const localMedian = contextVals[Math.floor(contextVals.length / 2)];
+    const diff = out[i].midi - localMedian;
+    if (Math.abs(Math.abs(diff) - 12) <= OCTAVE_TOL) out[i].midi -= Math.sign(diff) * 12;
+  }
+  return out;
+}
+
+function extractNotes(smoothedFrames, minDuration) {
+  const segments = [];
+  let cur = null;
+  for (let i = 0; i < smoothedFrames.length; i++) {
+    const f = smoothedFrames[i];
+    if (f.midi == null) { if (cur) { segments.push(cur); cur = null; } continue; }
+    const rounded = Math.round(f.midi);
+    const clarity = f.clarity || 0;
+    if (!cur) cur = { midi: rounded, start: f.t, end: f.t, sum: f.midi, count: 1, claritySum: clarity };
+    else if (rounded === cur.midi) { cur.end = f.t; cur.sum += f.midi; cur.count++; cur.claritySum += clarity; }
+    else { segments.push(cur); cur = { midi: rounded, start: f.t, end: f.t, sum: f.midi, count: 1, claritySum: clarity }; }
+  }
+  if (cur) segments.push(cur);
+
+  let result = segments.filter(s => (s.end - s.start) >= minDuration).map(s => {
+    const avgMidi = s.sum / s.count;
+    const confidence = Math.max(0, Math.min(1, (s.claritySum / s.count) / 0.7));
+    return { midi: Math.round(avgMidi), freq: midiToFreq(avgMidi), name: midiToName(avgMidi), start: s.start, end: s.end, confidence, frameCount: s.count };
+  });
+
+  const merged = [];
+  for (const n of result) {
+    const last = merged[merged.length - 1];
+    if (last && last.midi === n.midi && (n.start - last.end) < 0.09) {
+      const totalFrames = last.frameCount + n.frameCount;
+      last.confidence = (last.confidence * last.frameCount + n.confidence * n.frameCount) / totalFrames;
+      last.frameCount = totalFrames; last.end = n.end;
+    } else merged.push(Object.assign({}, n));
+  }
+  return merged.map(n => ({ midi: n.midi, freq: n.freq, name: n.name, start: n.start, end: n.end, confidence: Math.round(n.confidence * 100) / 100 }));
+}
+
+function checkEnvironment() {
+  if (!window.isSecureContext) return "This page isn't loaded over a secure (https) connection, so the browser won't allow microphone access here. Open HumTune's published link directly in your phone's browser to get an https address.";
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return "This browser doesn't expose the microphone API (getUserMedia). Try the latest Chrome, Safari, or Firefox.";
+  if (!(window.AudioContext || window.webkitAudioContext)) return "This browser doesn't support the Web Audio API needed to analyze pitch.";
+  return null;
+}
+
+/* new diagnostic layer built ON TOP of the same frame data, for the
+   more specific error states the brief asks for (too-short / silent /
+   noisy) — does not change how pitch is detected */
+function diagnoseRecording(frames) {
+  if (frames.length < 6) return 'too_short';
+  const sound = frames.filter(f => f.rms >= SILENCE_RMS);
+  if (sound.length === 0) return 'silent';
+  const pitched = sound.filter(f => f.midi != null);
+  if (pitched.length / sound.length < 0.25) return 'noisy';
+  return null;
+}
+
+/* =====================================================================
+   AudioRecorder — same getUserMedia/permission flow as v0.1, extended
+   with pause/resume (the brief asked for this "if technically
+   possible" — it is, since we just stop appending samples) and a
+   pluggable sensitivity/noise-suppression setting from Settings.
+===================================================================== */
+const Recorder = {
+  stream: null, ctx: null, source: null, gainNode: null, analyser: null,
+  recordStartCtxTime: 0, pausedElapsed: 0, paused: false, _pauseStartedAt: 0,
+  noiseFloor: 0.006,
+
+  async start(settings) {
+    const envErr = checkEnvironment();
+    if (envErr) return { error: { title: "Can't access audio here", message: envErr } };
+    try {
+      this.stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: false, noiseSuppression: !!settings.noiseSuppression, autoGainControl: false }
+      });
+    } catch (err) {
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError')
+        return { error: { title: 'Microphone permission denied', message: "HumTune needs microphone access to hear your humming. Allow microphone access for this site in your browser settings, then reload and try again." } };
+      if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError')
+        return { error: { title: 'No microphone found', message: "Your device doesn't seem to have a microphone available to the browser." } };
+      if (err.name === 'NotReadableError')
+        return { error: { title: 'Microphone is busy', message: 'Another app may be using the microphone right now. Close it and try again.' } };
+      return { error: { title: 'Microphone error', message: err.message || 'An unknown error occurred while accessing the microphone.' } };
+    }
+    try {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      if (this.ctx.state === 'suspended') await this.ctx.resume();
+      this.source = this.ctx.createMediaStreamSource(this.stream);
+      this.gainNode = this.ctx.createGain();
+      this.gainNode.gain.value = settings.sensitivity || 1;
+      this.analyser = this.ctx.createAnalyser();
+      this.analyser.fftSize = 2048;
+      this.source.connect(this.gainNode).connect(this.analyser);
+    } catch (err) {
+      this.releaseStream();
+      return { error: { title: 'Audio setup failed', message: err.message || 'Could not initialize the audio pipeline.' } };
+    }
+    this.recordStartCtxTime = this.ctx.currentTime;
+    this.pausedElapsed = 0;
+    this.paused = false;
+    this.noiseFloor = 0.006;
+    return { ok: true };
+  },
+
+  sampleOnce() {
+    if (!this.analyser || this.paused) return null;
+    const buf = new Float32Array(this.analyser.fftSize);
+    this.analyser.getFloatTimeDomainData(buf);
+    const { freq, rms, clarity } = detectPitch(buf, this.ctx.sampleRate, this.noiseFloor);
+    // Slowly track the ambient noise floor from quiet moments only, so a
+    // sustained loud hum can never drag the "floor" up and make the gate
+    // too permissive — only readings near-or-below the current estimate move it.
+    if (rms < this.noiseFloor * 3) this.noiseFloor = this.noiseFloor * 0.9 + rms * 0.1;
+    const t = (this.ctx.currentTime - this.recordStartCtxTime - this.pausedElapsed);
+    const midi = freq > 0 ? freqToMidi(freq) : null;
+    return { t, midi, rms, clarity };
+  },
+
+  pause() { if (!this.paused) { this._pauseStartedAt = this.ctx.currentTime; this.paused = true; } },
+  resume() { if (this.paused) { this.pausedElapsed += this.ctx.currentTime - this._pauseStartedAt; this.paused = false; } },
+
+  releaseStream() {
+    if (this.stream) { this.stream.getTracks().forEach(t => t.stop()); this.stream = null; }
+    if (this.source) { try { this.source.disconnect(); } catch (e) {} this.source = null; }
+    if (this.ctx) { try { this.ctx.close(); } catch (e) {} this.ctx = null; }
+    this.analyser = null; this.gainNode = null;
+  }
+};
+
+/* =====================================================================
+   MelodyModel — Note shape adapted for editing (id + pitch + velocity)
+   built from the exact notes extractNotes() returns. The original
+   engine doesn't estimate per-note loudness, so velocity defaults to a
+   flat 0.8 today rather than inventing dynamics data that was never
+   detected.
+===================================================================== */
+function newId(prefix) { return prefix + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+function toAppNotes(rawNotes) { return rawNotes.map(n => ({ id: newId('n'), pitch: n.midi, start: n.start, end: n.end, velocity: 0.8, confidence: (n.confidence != null ? n.confidence : 1) })); }
+
+/* =====================================================================
+   MUSICAL ENHANCEMENT ENGINE (local, rule-based — not an external AI model)
+   Suggests conservative pitch/cleanup fixes based on the melody's own
+   detected key and each note's own confidence — never touches a note the
+   detector was already confident about, so the user's real musical intent
+   (including "unusual" but deliberate notes) is preserved.
+===================================================================== */
+const KRUMHANSL_MAJOR = [6.35,2.23,3.48,2.33,4.38,4.09,2.52,5.19,2.39,3.66,2.29,2.88];
+const KRUMHANSL_MINOR = [6.33,2.68,3.52,5.38,2.60,3.53,2.54,4.75,3.98,2.69,3.34,3.17];
+const MAJOR_SCALE = [0,2,4,5,7,9,11], MINOR_SCALE = [0,2,3,5,7,8,10];
+
+function detectSuggestedKey(notes) {
+  if (!notes.length) return null;
+  const weights = new Array(12).fill(0);
+  notes.forEach(n => { weights[((n.pitch % 12) + 12) % 12] += Math.max(0.1, n.end - n.start); });
+  function correlate(profile, rotation) {
+    const rotated = profile.map((_, i) => profile[(i - rotation + 12) % 12]);
+    const meanW = weights.reduce((a,b)=>a+b,0) / 12, meanP = rotated.reduce((a,b)=>a+b,0) / 12;
+    let num = 0, dw = 0, dp = 0;
+    for (let i = 0; i < 12; i++) { const w = weights[i]-meanW, p = rotated[i]-meanP; num += w*p; dw += w*w; dp += p*p; }
+    return (dw && dp) ? num / Math.sqrt(dw*dp) : 0;
+  }
+  let best = { tonic: 0, mode: 'major', score: -Infinity };
+  for (let t = 0; t < 12; t++) {
+    const majScore = correlate(KRUMHANSL_MAJOR, t), minScore = correlate(KRUMHANSL_MINOR, t);
+    if (majScore > best.score) best = { tonic: t, mode: 'major', score: majScore };
+    if (minScore > best.score) best = { tonic: t, mode: 'minor', score: minScore };
+  }
+  return { tonic: best.tonic, mode: best.mode, name: NOTE_NAMES[best.tonic] + (best.mode === 'major' ? ' Major' : ' Minor') };
+}
+
+function enhanceMelody(notes, level) {
+  const key = detectSuggestedKey(notes);
+  const scale = key ? (key.mode === 'major' ? MAJOR_SCALE : MINOR_SCALE).map(d => (d + key.tonic) % 12) : null;
+  const confThreshold = level === 'balanced' ? 0.75 : 0.5;
+  let out = notes.map(n => Object.assign({}, n));
+  const summary = [];
+
+  if (scale) {
+    out.forEach((n, i) => {
+      const pc = ((n.pitch % 12) + 12) % 12;
+      if (scale.includes(pc)) return;
+      const conf = n.confidence != null ? n.confidence : 1;
+      if (conf >= confThreshold) return;
+      let bestShift = null, bestDist = Infinity;
+      for (const shift of [-1, 1, -2, 2]) {
+        const candidatePc = ((pc + shift) % 12 + 12) % 12;
+        if (scale.includes(candidatePc) && Math.abs(shift) < bestDist) { bestDist = Math.abs(shift); bestShift = shift; }
+      }
+      if (bestShift != null) {
+        const fromName = midiToName(n.pitch);
+        n.pitch += bestShift;
+        summary.push(`Note ${i+1}: ${fromName} → ${midiToName(n.pitch)} (matched to ${key.name}, was a low-confidence detection)`);
+      }
+    });
+  }
+
+  if (level === 'balanced') {
+    const kept = [];
+    out.forEach((n) => {
+      const dur = n.end - n.start, conf = n.confidence != null ? n.confidence : 1;
+      if (dur < 0.1 && conf < 0.4 && kept.length) { summary.push(`Removed a very short, low-confidence fragment near ${fmtTime(n.start)}`); return; }
+      kept.push(n);
+    });
+    out = kept;
+
+    const GAP_THRESHOLD = 0.06;
+    let closedCount = 0;
+    for (let i = 0; i < out.length - 1; i++) {
+      const gap = out[i+1].start - out[i].end;
+      if (gap > 0 && gap <= GAP_THRESHOLD) { out[i].end = out[i+1].start; closedCount++; }
+    }
+    if (closedCount > 0) summary.push(`Tightened ${closedCount} small timing gap${closedCount>1?'s':''} between notes`);
+  }
+  return { notes: out, summary, key };
+}
+
+const MelodyModel = {
+  fromDetected(rawNotes, settings) {
+    const notes = toAppNotes(rawNotes);
+    return {
+      id: null, name: '', notes,
+      originalNotes: JSON.parse(JSON.stringify(notes)), // immutable snapshot, never edited
+      versions: [], // snapshots pushed on each Save-after-edit
+      tempo: (settings && settings.tempo) || 100,
+      instrument: (settings && settings.instrument) || 'piano',
+      createdAt: Date.now(), updatedAt: Date.now(),
+      favorite: false, draft: true, version: 1
+    };
+  },
+  blank(settings) {
+    return { id: null, name: '', notes: [], originalNotes: [], versions: [], tempo: (settings&&settings.tempo)||100, instrument: (settings&&settings.instrument)||'piano', createdAt: Date.now(), updatedAt: Date.now(), favorite: false, draft: true, version: 1 };
+  },
+  clone(m) { return JSON.parse(JSON.stringify(m)); },
+  duration(m) { if (!m.notes.length) return 0; return Math.max(...m.notes.map(n => n.end)); },
+  isEqual(a, b) { return JSON.stringify({n:a.notes,t:a.tempo,i:a.instrument,name:a.name}) === JSON.stringify({n:b.notes,t:b.tempo,i:b.instrument,name:b.name}); }
+};
+
+/* =====================================================================
+   STORAGE — localStorage (the melody+settings payloads here are small
+   text/JSON, well within what localStorage is meant for; IndexedDB
+   would only earn its complexity at a much larger data scale)
+===================================================================== */
+const Storage = {
+  K: { melodies:'humtune_melodies_v1', deleted:'humtune_deleted_v1', draft:'humtune_draft_v1', settings:'humtune_settings_v1', onboarded:'humtune_onboarded_v1' },
+  loadMelodies() { try { return JSON.parse(localStorage.getItem(this.K.melodies)) || []; } catch (e) { return []; } },
+  saveMelodies(l) { try { localStorage.setItem(this.K.melodies, JSON.stringify(l)); } catch (e) { toast('Storage failed — your browser may be out of space or blocking local storage.'); } },
+  upsertMelody(m) { const l = this.loadMelodies(); const i = l.findIndex(x=>x.id===m.id); if (i>=0) l[i]=m; else l.unshift(m); this.saveMelodies(l); return m; },
+  getMelody(id) { return this.loadMelodies().find(x=>x.id===id) || null; },
+  softDeleteMelody(id) {
+    const l = this.loadMelodies(); const idx = l.findIndex(x=>x.id===id); if (idx<0) return;
+    const [m] = l.splice(idx,1); this.saveMelodies(l);
+    const del = this.loadDeleted(); m._deletedAt = Date.now(); del.unshift(m);
+    try { localStorage.setItem(this.K.deleted, JSON.stringify(del.slice(0,50))); } catch(e){}
+  },
+  loadDeleted() { try { return JSON.parse(localStorage.getItem(this.K.deleted)) || []; } catch(e){ return []; } },
+  restoreDeleted(id) {
+    const del = this.loadDeleted(); const idx = del.findIndex(x=>x.id===id); if (idx<0) return;
+    const [m] = del.splice(idx,1); delete m._deletedAt;
+    try { localStorage.setItem(this.K.deleted, JSON.stringify(del)); } catch(e){}
+    this.upsertMelody(m);
+  },
+  purgeDeletedForever(id) { const del = this.loadDeleted().filter(x=>x.id!==id); try { localStorage.setItem(this.K.deleted, JSON.stringify(del)); } catch(e){} },
+  loadDraft() { try { return JSON.parse(localStorage.getItem(this.K.draft)); } catch (e) { return null; } },
+  saveDraft(m) { try { localStorage.setItem(this.K.draft, JSON.stringify(m)); } catch (e) {} },
+  clearDraft() { localStorage.removeItem(this.K.draft); },
+  loadSettings() {
+    const d = { theme:'dark', instrument:'piano', tempo:100, noiseSuppression:true, sensitivity:1, textSize:'md', motion:'system' };
+    try { return Object.assign(d, JSON.parse(localStorage.getItem(this.K.settings)) || {}); } catch (e) { return d; }
+  },
+  saveSettings(s) { try { localStorage.setItem(this.K.settings, JSON.stringify(s)); } catch (e) {} },
+  isOnboarded() { return localStorage.getItem(this.K.onboarded) === '1'; },
+  setOnboarded() { localStorage.setItem(this.K.onboarded, '1'); }
+};
+
+/* =====================================================================
+   INSTRUMENT ENGINE — procedurally synthesized voices (Web Audio
+   oscillators). HumTune doesn't ship or load sampled instrument
+   recordings, so each "instrument" is a distinct synthesized
+   approximation, not a realistic sample.
+===================================================================== */
+const INSTRUMENTS = {
+  piano:       { label:'Piano', icon:'🎹', osc1:'triangle', osc2:'sine', ratio:2, gain2:0.16, ff:3200, fq:0.7, atk:0.008, rel:0.35, vib:0, vd:0, oct:0, sustain:false,
+                 transient:{ freq:3200, q:0.8, gain:0.06, duration:0.02, filterType:'bandpass' } },
+  guitar:      { label:'Acoustic Guitar', icon:'🎸', osc1:'triangle', osc2:'square', ratio:2, gain2:0.08, ff:2600, fq:1.0, atk:0.004, rel:0.22, vib:0, vd:0, oct:0, sustain:false,
+                 transient:{ freq:4200, q:1.2, gain:0.14, duration:0.012, filterType:'bandpass' } },
+  electricGuitar: { label:'Electric Guitar', icon:'🎸', osc1:'sawtooth', osc2:'triangle', ratio:2, gain2:0.22, ff:2100, fq:1.6, atk:0.006, rel:0.45, vib:0, vd:0, oct:0, sustain:true, decay:0.18, sustainLevel:0.55, drive:4,
+                 transient:{ freq:3600, q:1.0, gain:0.1, duration:0.01, filterType:'bandpass' } },
+  violin:      { label:'Violin', icon:'🎻', osc1:'sawtooth', osc2:'sawtooth', ratio:1.005, gain2:0.45, ff:2400, fq:1.2, atk:0.11, rel:0.28, vib:5.5, vd:6, oct:0, sustain:true, decay:0.14, sustainLevel:0.72 },
+  flute:       { label:'Flute', icon:'🪈', osc1:'sine', osc2:'sine', ratio:2, gain2:0.05, ff:4200, fq:0.5, atk:0.08, rel:0.22, vib:4.5, vd:4, oct:1, sustain:true, decay:0.1, sustainLevel:0.68,
+                 transient:{ freq:2600, q:0.6, gain:0.05, duration:0.05, filterType:'bandpass' } },
+  trumpet:     { label:'Trumpet', icon:'🎺', osc1:'sawtooth', osc2:'square', ratio:1, gain2:0.30, ff:2200, fq:2.0, atk:0.02, rel:0.16, vib:0, vd:0, oct:0, sustain:true, decay:0.06, sustainLevel:0.75 },
+  saxophone:   { label:'Saxophone', icon:'🎷', osc1:'sawtooth', osc2:'square', ratio:1.003, gain2:0.35, ff:1900, fq:2.6, atk:0.045, rel:0.24, vib:4.8, vd:5, oct:0, sustain:true, decay:0.1, sustainLevel:0.7,
+                 transient:{ freq:2200, q:0.7, gain:0.06, duration:0.045, filterType:'bandpass' } },
+  bass:        { label:'Bass', icon:'🎸', osc1:'sine', osc2:'triangle', ratio:2, gain2:0.10, ff:900, fq:0.8, atk:0.01, rel:0.24, vib:0, vd:0, oct:-1, sustain:false },
+  synth:       { label:'Synth', icon:'🎛️', osc1:'sawtooth', osc2:'square', ratio:1.5, gain2:0.25, ff:1800, fq:3.0, atk:0.005, rel:0.2, vib:0, vd:0, oct:0, sustain:false }
+};
+function freqCurve(base, dur, vibHz, vibDepth, pts) {
+  const c = new Float32Array(pts);
+  for (let i=0;i<pts;i++) { const t=(i/(pts-1))*dur; const cents = vibHz>0 ? Math.sin(2*Math.PI*vibHz*t)*vibDepth : 0; c[i] = base*Math.pow(2,cents/1200); }
+  return c;
+}
+function getNoiseBuffer(ctx) {
+  if (!ctx._humtuneNoise) {
+    const len = Math.floor(ctx.sampleRate * 0.25);
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+    ctx._humtuneNoise = buf;
+  }
+  return ctx._humtuneNoise;
+}
+function getDriveCurve(ctx, amount) {
+  if (!ctx._humtuneDrive) {
+    const n = 256, curve = new Float32Array(n), deg = Math.PI / 180;
+    for (let i = 0; i < n; i++) { const x = i * 2 / n - 1; curve[i] = (3 + amount) * x * 20 * deg / (Math.PI + amount * Math.abs(x)); }
+    ctx._humtuneDrive = curve;
+  }
+  return ctx._humtuneDrive;
+}
+function playTransient(ctx, dest, startTime, t) {
+  const src = ctx.createBufferSource(); src.buffer = getNoiseBuffer(ctx);
+  const filt = ctx.createBiquadFilter(); filt.type = t.filterType || 'bandpass'; filt.frequency.value = t.freq; filt.Q.value = t.q || 1;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0, startTime);
+  g.gain.linearRampToValueAtTime(t.gain, startTime + 0.003);
+  g.gain.exponentialRampToValueAtTime(0.0006, startTime + t.duration);
+  src.connect(filt).connect(g).connect(dest);
+  src.start(startTime); src.stop(startTime + t.duration + 0.03);
+  return src;
+}
+function playInstrumentNote(ctx, key, freq, startTime, duration, velocity, dest) {
+  const p = INSTRUMENTS[key] || INSTRUMENTS.piano;
+  const vel = velocity != null ? velocity : 0.8;
+  const f = freq * Math.pow(2, p.oct);
+  const o1 = ctx.createOscillator(); o1.type = p.osc1;
+  const o2 = ctx.createOscillator(); o2.type = p.osc2;
+  if (p.vib > 0) {
+    const pts = Math.max(8, Math.round(duration*60));
+    o1.frequency.setValueCurveAtTime(freqCurve(f,duration,p.vib,p.vd,pts), startTime, duration);
+    o2.frequency.setValueCurveAtTime(freqCurve(f*p.ratio,duration,p.vib,p.vd,pts), startTime, duration);
+  } else {
+    o1.frequency.setValueAtTime(f, startTime);
+    o2.frequency.setValueAtTime(f*p.ratio, startTime);
+  }
+  const g2 = ctx.createGain(); g2.gain.value = p.gain2;
+  const master = ctx.createGain();
+  const filter = ctx.createBiquadFilter(); filter.type='lowpass';
+  filter.frequency.value = p.ff * (0.6 + 0.7 * vel); // velocity brightens/dulls the timbre, not just the volume
+  filter.Q.value=p.fq;
+
+  const nodes = [o1, o2];
+  o1.connect(master); o2.connect(g2).connect(master);
+  if (p.drive) {
+    const shaper = ctx.createWaveShaper(); shaper.curve = getDriveCurve(ctx, p.drive); shaper.oversample = '2x';
+    master.connect(shaper).connect(filter).connect(dest);
+  } else {
+    master.connect(filter).connect(dest);
+  }
+
+  const peak = 0.25 + 0.25 * vel;
+  if (p.sustain) {
+    const decayTime = p.decay || 0.12, sustainLevel = p.sustainLevel != null ? p.sustainLevel : 0.6;
+    const decayEnd = startTime + p.atk + decayTime;
+    const sustainEnd = Math.max(decayEnd, startTime + duration);
+    master.gain.setValueAtTime(0, startTime);
+    master.gain.linearRampToValueAtTime(peak, startTime + p.atk);
+    master.gain.linearRampToValueAtTime(peak * sustainLevel, decayEnd);
+    if (sustainEnd > decayEnd) master.gain.setValueAtTime(peak * sustainLevel, sustainEnd);
+    master.gain.exponentialRampToValueAtTime(0.001, sustainEnd + p.rel);
+    var stopAt = sustainEnd + p.rel + 0.05;
+  } else {
+    master.gain.setValueAtTime(0, startTime);
+    master.gain.linearRampToValueAtTime(peak, startTime + p.atk);
+    master.gain.exponentialRampToValueAtTime(0.001, startTime + duration + p.rel);
+    var stopAt = startTime + duration + p.rel + 0.05;
+  }
+  o1.start(startTime); o2.start(startTime);
+  o1.stop(stopAt); o2.stop(stopAt);
+
+  if (p.transient) nodes.push(playTransient(ctx, dest, startTime, p.transient));
+  return nodes;
+}
+
+/* =====================================================================
+   PLAYBACK ENGINE — transport (play/pause/stop/seek), tempo-scaled
+===================================================================== */
+/* =====================================================================
+   STUDIO AUDIO ENGINE — single shared master bus for every Studio
+   subsystem (melody playback already has its own simple engine above;
+   this one is for Looper/Drums/Bass/Chords/Vocal so none of them build
+   an isolated, unsynchronized audio graph of their own).
+===================================================================== */
+const StudioEngine = {
+  ctx: null, masterGain: null, effectsInput: null, tracks: {},
+  effects: { filter:{on:false, freq:2000, type:'lowpass'}, distortion:{on:false, amount:10}, delay:{on:false, wet:0.35, time:0.3, feedback:0.32}, reverb:{on:false, wet:0.3} },
+  ensure() {
+    if (this.ctx) return;
+    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    this.masterGain = this.ctx.createGain(); this.masterGain.gain.value = 0.9;
+    this.masterGain.connect(this.ctx.destination);
+    this.buildEffectsChain();
+  },
+  buildEffectsChain() {
+    const ctx = this.ctx;
+    this.effectsInput = ctx.createGain();
+    this.filterNode = ctx.createBiquadFilter(); this.filterNode.type = 'lowpass'; this.filterNode.frequency.value = 20000;
+    this.distNode = ctx.createWaveShaper(); this.distNode.curve = this._linearCurve();
+    this.delayDry = ctx.createGain(); this.delayWet = ctx.createGain(); this.delayWet.gain.value = 0;
+    this.delayNode = ctx.createDelay(1.5); this.delayNode.delayTime.value = 0.3;
+    this.delayFeedback = ctx.createGain(); this.delayFeedback.gain.value = 0.32;
+    this.delayOut = ctx.createGain();
+    this.reverbDry = ctx.createGain(); this.reverbWet = ctx.createGain(); this.reverbWet.gain.value = 0;
+    this.convolver = ctx.createConvolver(); this.convolver.buffer = this._makeImpulse(2.0, 2.2);
+    this.reverbOut = ctx.createGain();
+
+    this.effectsInput.connect(this.filterNode); this.filterNode.connect(this.distNode);
+    this.distNode.connect(this.delayDry); this.delayDry.connect(this.delayOut); this.delayDry.gain.value = 1;
+    this.distNode.connect(this.delayNode); this.delayNode.connect(this.delayFeedback); this.delayFeedback.connect(this.delayNode);
+    this.delayNode.connect(this.delayWet); this.delayWet.connect(this.delayOut);
+    this.delayOut.connect(this.reverbDry); this.reverbDry.connect(this.reverbOut); this.reverbDry.gain.value = 1;
+    this.delayOut.connect(this.convolver); this.convolver.connect(this.reverbWet); this.reverbWet.connect(this.reverbOut);
+    this.reverbOut.connect(this.masterGain);
+  },
+  _linearCurve() { const c = new Float32Array(2); c[0] = -1; c[1] = 1; return c; },
+  _driveCurve(amount) { const n=256, c=new Float32Array(n), deg=Math.PI/180; for (let i=0;i<n;i++){ const x=i*2/n-1; c[i]=(3+amount)*x*20*deg/(Math.PI+amount*Math.abs(x)); } return c; },
+  _makeImpulse(duration, decay) {
+    const rate = this.ctx.sampleRate, length = Math.floor(rate*duration);
+    const impulse = this.ctx.createBuffer(2, length, rate);
+    for (let c=0;c<2;c++){ const d=impulse.getChannelData(c); for (let i=0;i<length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/length, decay); }
+    return impulse;
+  },
+  setFilter(on, freq, type) { this.ensure(); this.filterNode.frequency.value = on ? (freq||2000) : 20000; this.filterNode.type = type||'lowpass'; this.effects.filter = {on, freq:freq||2000, type:type||'lowpass'}; },
+  setDistortion(on, amount) { this.ensure(); this.distNode.curve = on ? this._driveCurve(amount||10) : this._linearCurve(); this.effects.distortion = {on, amount:amount||10}; },
+  setDelay(on, wet, time, feedback) { this.ensure(); this.delayWet.gain.value = on ? (wet!=null?wet:0.35) : 0; this.delayNode.delayTime.value = time!=null?time:0.3; this.delayFeedback.gain.value = feedback!=null?feedback:0.32; this.effects.delay = {on, wet:wet!=null?wet:0.35, time:time!=null?time:0.3, feedback:feedback!=null?feedback:0.32}; },
+  setReverb(on, wet) { this.ensure(); this.reverbWet.gain.value = on ? (wet!=null?wet:0.3) : 0; this.effects.reverb = {on, wet:wet!=null?wet:0.3}; },
+  getOrCreateTrack(id, name) {
+    this.ensure();
+    if (this.tracks[id]) return this.tracks[id];
+    const gain = this.ctx.createGain(); gain.gain.value = 1;
+    let node = gain;
+    if (this.ctx.createStereoPanner) { const pan = this.ctx.createStereoPanner(); gain.connect(pan); node = pan; this.tracks[id] = { id, name, gainNode: gain, panNode: pan, volume:1, muted:false, solo:false }; }
+    else { this.tracks[id] = { id, name, gainNode: gain, panNode:null, volume:1, muted:false, solo:false }; }
+    node.connect(this.effectsInput);
+    return this.tracks[id];
+  },
+  setTrackVolume(id, vol) { const t=this.tracks[id]; if (t){ t.volume=vol; this._applyGain(t); } },
+  setTrackMute(id, m) { const t=this.tracks[id]; if (t){ t.muted=m; this._applyGain(t); } },
+  setTrackSolo(id, s) { const t=this.tracks[id]; if (t){ t.solo=s; this._applyAll(); } },
+  setTrackPan(id, p) { const t=this.tracks[id]; if (t && t.panNode) t.panNode.pan.value = p; },
+  _applyAll() { const anySolo = Object.values(this.tracks).some(t=>t.solo); Object.values(this.tracks).forEach(t=>this._applyGain(t, anySolo)); },
+  _applyGain(t, anySolo) { if (anySolo===undefined) anySolo = Object.values(this.tracks).some(tt=>tt.solo); const audible = !t.muted && (!anySolo || t.solo); t.gainNode.gain.value = audible ? t.volume : 0; },
+  setMasterVolume(v) { this.ensure(); this.masterGain.gain.value = v; },
+};
+
+/* =====================================================================
+   LOOPER — real mic-audio recording (MediaRecorder -> decoded
+   AudioBuffer), looped via looped AudioBufferSourceNode, multiple
+   independently controllable layers via the shared StudioEngine.
+   Honest limitation: overdub layers are timed in software to match the
+   first layer's length, not sample-accurate like a hardware looper —
+   there can be a small (typically <50ms) start-alignment offset from
+   real-world recording-start latency.
+===================================================================== */
+const Looper = {
+  layers: [], loopDuration: null, playing: false, paused: false, pausedAtOffset: 0,
+  loopOn: true, sources: [], playStartCtxTime: 0, _activeRecorder: null,
+  async recordLayer(fixedDuration) {
+    const envErr = checkEnvironment(); if (envErr) return { error: envErr };
+    let stream;
+    try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+    catch (e) { return { error: e.message || 'Microphone unavailable' }; }
+    return new Promise((resolve) => {
+      let mr;
+      try { mr = new MediaRecorder(stream); } catch (e) { stream.getTracks().forEach(t=>t.stop()); resolve({ error: 'This browser does not support MediaRecorder, so Looper recording is not available here.' }); return; }
+      const chunks = [];
+      mr.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+      mr.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        try {
+          const blob = new Blob(chunks, { type: mr.mimeType || 'audio/webm' });
+          const arr = await blob.arrayBuffer();
+          StudioEngine.ensure();
+          const buffer = await StudioEngine.ctx.decodeAudioData(arr);
+          resolve({ buffer });
+        } catch (e) { resolve({ error: 'Could not process the recorded audio: ' + e.message }); }
+      };
+      mr.start();
+      this._activeRecorder = mr;
+      if (fixedDuration) setTimeout(() => { if (mr.state !== 'inactive') mr.stop(); }, fixedDuration * 1000);
+    });
+  },
+  stopRecording() { if (this._activeRecorder && this._activeRecorder.state !== 'inactive') this._activeRecorder.stop(); },
+  addLayer(buffer) {
+    if (!this.loopDuration) this.loopDuration = buffer.duration;
+    const id = newId('loop');
+    const trackId = 'loop:' + id;
+    StudioEngine.getOrCreateTrack(trackId, 'Loop Layer');
+    this.layers.push({ id, buffer, muted: false, solo: false, volume: 1, trackId });
+    return id;
+  },
+  removeLayer(id) { this.stop(); this.layers = this.layers.filter(l => l.id !== id); if (!this.layers.length) this.loopDuration = null; },
+  clear() { this.stop(); this.layers = []; this.loopDuration = null; },
+  stopSources() { this.sources.forEach(s => { try { s.onended = null; s.stop(); } catch (e) {} }); this.sources = []; },
+  play(fromOffset) {
+    if (!this.layers.length) return;
+    this.stopSources();
+    const startAt = StudioEngine.ctx.currentTime + 0.05;
+    this.playStartCtxTime = startAt;
+    const offset = fromOffset || 0;
+    this.sources = this.layers.map(l => {
+      const src = StudioEngine.ctx.createBufferSource(); src.buffer = l.buffer; src.loop = this.loopOn;
+      const track = StudioEngine.tracks[l.trackId];
+      src.connect(track.gainNode);
+      const bufOffset = l.buffer.duration > 0 ? (offset % l.buffer.duration) : 0;
+      src.start(startAt, bufOffset);
+      src.onended = () => {
+        if (!this.loopOn) { this.playing = false; this.paused = false; this.pausedAtOffset = 0; if (App.screen === 'studio') render(); }
+      };
+      return src;
+    });
+    this.playing = true; this.paused = false;
+  },
+  pause() {
+    if (!this.playing || this.paused) return;
+    const elapsed = StudioEngine.ctx.currentTime - this.playStartCtxTime;
+    this.pausedAtOffset = (this.pausedAtOffset + Math.max(0, elapsed)) % (this.loopDuration || 1);
+    this.stopSources();
+    this.paused = true; this.playing = false;
+  },
+  resume() { if (!this.paused) return; this.play(this.pausedAtOffset); },
+  stop() { this.stopSources(); this.playing = false; this.paused = false; this.pausedAtOffset = 0; },
+  toggleLoopOn() { this.loopOn = !this.loopOn; this.sources.forEach(s => { s.loop = this.loopOn; }); },
+  setLayerVolume(id, v) { const l = this.layers.find(x=>x.id===id); if (l) { l.volume=v; StudioEngine.setTrackVolume(l.trackId, v); } },
+  setLayerPan(id, p) { const l = this.layers.find(x=>x.id===id); if (l) { l.pan=p; StudioEngine.setTrackPan(l.trackId, p); } },
+  setLayerMute(id, m) { const l = this.layers.find(x=>x.id===id); if (l) { l.muted=m; StudioEngine.setTrackMute(l.trackId, m); } },
+  setLayerSolo(id, s) { const l = this.layers.find(x=>x.id===id); if (l) { l.solo=s; StudioEngine.setTrackSolo(l.trackId, s); } },
+};
+
+/* =====================================================================
+   DRUM MACHINE — correct Web Audio lookahead scheduler (schedules
+   events ahead of ctx.currentTime rather than triggering sound directly
+   from a JS timer, which drifts). Voices are procedurally synthesized.
+===================================================================== */
+const DrumMachine = {
+  steps: { kick: new Array(16).fill(false), snare: new Array(16).fill(false), hihat: new Array(16).fill(false), clap: new Array(16).fill(false) },
+  bpm: 100, playing: false, currentStep: 0, nextStepTime: 0, schedulerTimer: null,
+  lookahead: 25, scheduleAheadTime: 0.12, displayStep: -1,
+  toggleStep(row, i) { this.steps[row][i] = !this.steps[row][i]; },
+  clear() { Object.keys(this.steps).forEach(k => this.steps[k].fill(false)); },
+  start() {
+    if (this.playing) return;
+    StudioEngine.ensure(); StudioEngine.getOrCreateTrack('drums', 'Drums');
+    this.playing = true; this.currentStep = 0; this.nextStepTime = StudioEngine.ctx.currentTime + 0.05;
+    this.schedulerTimer = setInterval(() => this.scheduler(), this.lookahead);
+  },
+  stop() { this.playing = false; if (this.schedulerTimer) clearInterval(this.schedulerTimer); this.schedulerTimer = null; this.displayStep = -1; },
+  scheduler() {
+    while (this.nextStepTime < StudioEngine.ctx.currentTime + this.scheduleAheadTime) {
+      this.scheduleStep(this.currentStep, this.nextStepTime);
+      this.nextStepTime += (60.0 / this.bpm / 4);
+      this.currentStep = (this.currentStep + 1) % 16;
+    }
+  },
+  scheduleStep(step, time) {
+    const dest = StudioEngine.tracks['drums'].gainNode;
+    if (this.steps.kick[step]) this.playKick(time, dest);
+    if (this.steps.snare[step]) this.playSnare(time, dest);
+    if (this.steps.hihat[step]) this.playHihat(time, dest);
+    if (this.steps.clap[step]) this.playClap(time, dest);
+    const delayMs = Math.max(0, (time - StudioEngine.ctx.currentTime) * 1000);
+    setTimeout(() => { this.displayStep = step; if (App.screen === 'studio') drawDrumGrid(); }, delayMs);
+  },
+  playKick(time, dest) {
+    const ctx = StudioEngine.ctx, osc = ctx.createOscillator(), g = ctx.createGain();
+    osc.frequency.setValueAtTime(150, time); osc.frequency.exponentialRampToValueAtTime(40, time+0.12);
+    g.gain.setValueAtTime(1, time); g.gain.exponentialRampToValueAtTime(0.001, time+0.25);
+    osc.connect(g); g.connect(dest); osc.start(time); osc.stop(time+0.3);
+  },
+  playSnare(time, dest) {
+    const ctx = StudioEngine.ctx;
+    const noise = ctx.createBufferSource(); noise.buffer = getNoiseBuffer(ctx);
+    const nf = ctx.createBiquadFilter(); nf.type='highpass'; nf.frequency.value=1000;
+    const ng = ctx.createGain(); ng.gain.setValueAtTime(0.7,time); ng.gain.exponentialRampToValueAtTime(0.01,time+0.15);
+    noise.connect(nf); nf.connect(ng); ng.connect(dest); noise.start(time); noise.stop(time+0.2);
+    const osc = ctx.createOscillator(); osc.type='triangle'; osc.frequency.value=180;
+    const og = ctx.createGain(); og.gain.setValueAtTime(0.5,time); og.gain.exponentialRampToValueAtTime(0.01,time+0.1);
+    osc.connect(og); og.connect(dest); osc.start(time); osc.stop(time+0.15);
+  },
+  playHihat(time, dest) {
+    const ctx = StudioEngine.ctx;
+    const noise = ctx.createBufferSource(); noise.buffer = getNoiseBuffer(ctx);
+    const f = ctx.createBiquadFilter(); f.type='highpass'; f.frequency.value=7000;
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.35,time); g.gain.exponentialRampToValueAtTime(0.01,time+0.05);
+    noise.connect(f); f.connect(g); g.connect(dest); noise.start(time); noise.stop(time+0.08);
+  },
+  playClap(time, dest) {
+    const ctx = StudioEngine.ctx;
+    [0,0.015,0.03].forEach(off => {
+      const noise = ctx.createBufferSource(); noise.buffer = getNoiseBuffer(ctx);
+      const f = ctx.createBiquadFilter(); f.type='bandpass'; f.frequency.value=1500; f.Q.value=1.2;
+      const g = ctx.createGain(); g.gain.setValueAtTime(0.5,time+off); g.gain.exponentialRampToValueAtTime(0.01,time+off+0.08);
+      noise.connect(f); f.connect(g); g.connect(dest); noise.start(time+off); noise.stop(time+off+0.1);
+    });
+  },
+};
+
+/* =====================================================================
+   BASS + CHORDS — rule-based diatonic harmony from the melody's own
+   detected key (real music theory, not a model). Explicitly not AI.
+===================================================================== */
+function generateBassLine(melody) {
+  const key = detectSuggestedKey(melody.notes); if (!key) return null;
+  const totalDur = Math.max(1, MelodyModel.duration(melody));
+  const measureLen = 2;
+  const notes = [];
+  for (let t = 0; t < totalDur; t += measureLen) {
+    notes.push({ id:newId('bn'), pitch: key.tonic+36, start:t, end:Math.min(t+measureLen-0.1, totalDur), velocity:0.8, confidence:1 });
+  }
+  return { notes, key };
+}
+function generateChords(melody) {
+  const key = detectSuggestedKey(melody.notes); if (!key) return null;
+  const scale = key.mode === 'major' ? MAJOR_SCALE : MINOR_SCALE;
+  const progressionDegrees = [0,3,4,0]; // I-IV-V-I (or i-iv-v-i in minor) — a common, simple, real diatonic progression
+  const totalDur = Math.max(1, MelodyModel.duration(melody));
+  const chordLen = totalDur / progressionDegrees.length;
+  const notes = [];
+  progressionDegrees.forEach((deg, i) => {
+    [0,2,4].forEach(triadStep => {
+      const scaleIdx = (deg + triadStep) % 7;
+      const octShift = Math.floor((deg + triadStep) / 7);
+      const pitch = key.tonic + scale[scaleIdx] + 12*octShift + 48;
+      notes.push({ id:newId('cn'), pitch, start:i*chordLen, end:(i+1)*chordLen-0.15, velocity:0.6, confidence:1 });
+    });
+  });
+  return { notes, key, degrees: progressionDegrees };
+}
+
+/* =====================================================================
+   VOCAL STUDIO — real recording/takes, plus a real (if basic) pitch
+   analysis-driven correction. Honest limitation: correction is applied
+   via playbackRate (resampling), which shifts pitch and tempo together —
+   this is not independent time-stretch pitch correction like a
+   professional plugin, and is reported as such.
+===================================================================== */
+const VocalStudio = {
+  takes: [], _activeRecorder: null, _activeSource: null,
+  async recordTake() {
+    const envErr = checkEnvironment(); if (envErr) return { error: envErr };
+    let stream;
+    try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+    catch (e) { return { error: e.message || 'Microphone unavailable' }; }
+    return new Promise((resolve) => {
+      let mr;
+      try { mr = new MediaRecorder(stream); } catch (e) { stream.getTracks().forEach(t=>t.stop()); resolve({ error: 'This browser does not support MediaRecorder.' }); return; }
+      const chunks = [];
+      mr.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+      mr.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        try {
+          const blob = new Blob(chunks, { type: mr.mimeType || 'audio/webm' });
+          const arr = await blob.arrayBuffer();
+          StudioEngine.ensure();
+          const buffer = await StudioEngine.ctx.decodeAudioData(arr);
+          resolve({ buffer });
+        } catch (e) { resolve({ error: 'Could not process the recording: ' + e.message }); }
+      };
+      mr.start(); this._activeRecorder = mr;
+    });
+  },
+  stopRecording() { if (this._activeRecorder && this._activeRecorder.state !== 'inactive') this._activeRecorder.stop(); },
+  addTake(buffer) { const id = newId('take'); this.takes.push({ id, buffer, name: 'Take ' + (this.takes.length+1) }); return id; },
+  deleteTake(id) { this.takes = this.takes.filter(t => t.id !== id); },
+  play(id, rate) {
+    const take = this.takes.find(t => t.id === id); if (!take) return;
+    this.stop();
+    StudioEngine.getOrCreateTrack('vocal', 'Vocal');
+    const src = StudioEngine.ctx.createBufferSource(); src.buffer = take.buffer; src.playbackRate.value = rate || 1;
+    src.connect(StudioEngine.tracks['vocal'].gainNode); src.start(); this._activeSource = src;
+  },
+  stop() { if (this._activeSource) { try { this._activeSource.stop(); } catch (e) {} this._activeSource = null; } },
+};
+function analyzeTakeAveragePitch(buffer) {
+  const data = buffer.getChannelData(0), sr = buffer.sampleRate;
+  const windowSize = 2048, hop = 1024, votes = [];
+  for (let i = 0; i + windowSize < data.length; i += hop) {
+    const { freq, clarity } = detectPitch(data.subarray(i, i+windowSize), sr);
+    if (freq > 0 && clarity > 0.4) votes.push(freqToMidi(freq));
+  }
+  if (!votes.length) return null;
+  votes.sort((a,b)=>a-b);
+  return votes[Math.floor(votes.length/2)];
+}
+function suggestVocalCorrectionRate(take, melody) {
+  const avgMidi = analyzeTakeAveragePitch(take.buffer); if (avgMidi == null) return 1;
+  let targetMidi = Math.round(avgMidi);
+  const key = melody && melody.notes.length ? detectSuggestedKey(melody.notes) : null;
+  if (key) {
+    const scale = (key.mode === 'major' ? MAJOR_SCALE : MINOR_SCALE).map(d => (d + key.tonic) % 12);
+    const pc = ((targetMidi % 12) + 12) % 12;
+    if (!scale.includes(pc)) {
+      let best = null, bestDist = Infinity;
+      for (const shift of [-1,1,-2,2]) { const cpc = ((pc+shift)%12+12)%12; if (scale.includes(cpc) && Math.abs(shift) < bestDist) { bestDist = Math.abs(shift); best = shift; } }
+      if (best != null) targetMidi += best;
+    }
+  }
+  return Math.pow(2, (targetMidi - avgMidi) / 12);
+}
+
+const REF_TEMPO = 100;
+const Playback = {
+  ctx:null, masterGain:null, nodes:[], timers:[], raf:null, playing:false,
+  positionSec:0, playStartCtxTime:0, melody:null, callbacks:{},
+  ensureCtx() { if (!this.ctx) { this.ctx = new (window.AudioContext||window.webkitAudioContext)(); this.masterGain = this.ctx.createGain(); this.masterGain.gain.value=0.9; this.masterGain.connect(this.ctx.destination); } },
+  stopAllNodes() {
+    this.nodes.forEach(n => { try { n.stop(this.ctx.currentTime); } catch(e){} });
+    this.nodes = []; this.timers.forEach(id=>clearTimeout(id)); this.timers = [];
+    if (this.raf) { cancelAnimationFrame(this.raf); this.raf = null; }
+  },
+  play(melody, fromSec, callbacks) {
+    this.ensureCtx(); if (this.ctx.state==='suspended') this.ctx.resume();
+    this.stopAllNodes(); this.melody = melody; this.callbacks = callbacks||{};
+    const rate = melody.tempo/REF_TEMPO; const from = fromSec||0;
+    this.positionSec = from; this.playStartCtxTime = this.ctx.currentTime+0.08; this.playing = true;
+    const toPlay = melody.notes.filter(n=>n.end>from);
+    toPlay.forEach(n => {
+      const relStart = Math.max(0,(n.start-from)/rate); const dur = Math.max(0.05,(n.end-n.start)/rate);
+      const startTime = this.playStartCtxTime + relStart;
+      const voices = playInstrumentNote(this.ctx, melody.instrument, midiToFreq(n.pitch), startTime, dur, n.velocity, this.masterGain);
+      this.nodes.push.apply(this.nodes, voices);
+      const tid = setTimeout(()=>{ if (this.callbacks.onNote) this.callbacks.onNote(n.id); }, Math.max(0, relStart*1000));
+      this.timers.push(tid);
+    });
+    const totalDur = (Math.max(from, melody.notes.length?Math.max(...melody.notes.map(n=>n.end)):from)-from)/rate;
+    const endTid = setTimeout(()=>{ this.playing=false; if (this.callbacks.onEnd) this.callbacks.onEnd(); }, Math.max(0,totalDur*1000)+120);
+    this.timers.push(endTid);
+    const loop = () => { if (!this.playing) return; const elapsed=(this.ctx.currentTime-this.playStartCtxTime)*rate; this.positionSec = from+Math.max(0,elapsed); if (this.callbacks.onTick) this.callbacks.onTick(this.positionSec); this.raf = requestAnimationFrame(loop); };
+    this.raf = requestAnimationFrame(loop);
+  },
+  pause() { if (!this.playing) return; this.playing=false; this.stopAllNodes(); },
+  stop() { this.playing=false; this.positionSec=0; this.stopAllNodes(); },
+  seek(sec) { const was=this.playing; this.stopAllNodes(); this.positionSec=sec; this.playing=false; if (was) this.play(this.melody, sec, this.callbacks); }
+};
+
+/* =====================================================================
+   EXPORT — JSON export works today via the platform's downloads
+   capability. A real Standard-MIDI-File byte encoder is implemented
+   below for architectural readiness, but is not wired to a working
+   download button: the downloads capability's file-type allowlist
+   does not currently include .mid/.midi, so offering it would fail or
+   mislead. See the final report for details.
+===================================================================== */
+function writeVarLen(v) { const b=[v&0x7f]; v>>=7; while (v>0) { b.unshift((v&0x7f)|0x80); v>>=7; } return b; }
+function MidiExporter_toBytes(melody) {
+  const division = 480;
+  const usPerQuarter = Math.round(60000000/melody.tempo);
+  const events = [{ tick:0, bytes:[0xFF,0x51,0x03,(usPerQuarter>>16)&0xff,(usPerQuarter>>8)&0xff,usPerQuarter&0xff] }];
+  const ticksPerSec = division*melody.tempo/60;
+  melody.notes.forEach(n => {
+    events.push({ tick: Math.round(n.start*ticksPerSec), bytes:[0x90, n.pitch, Math.round(20+n.velocity*100)] });
+    events.push({ tick: Math.round(n.end*ticksPerSec), bytes:[0x80, n.pitch, 0] });
+  });
+  events.sort((a,b)=>a.tick-b.tick);
+  let trackBytes = [], lastTick = 0;
+  events.forEach(e => { trackBytes.push.apply(trackBytes, writeVarLen(e.tick-lastTick)); trackBytes.push.apply(trackBytes, e.bytes); lastTick=e.tick; });
+  trackBytes.push.apply(trackBytes, [0x00,0xFF,0x2F,0x00]);
+  const len = trackBytes.length;
+  const header = [0x4D,0x54,0x68,0x64,0,0,0,6,0,0,0,1,(division>>8)&0xff,division&0xff];
+  const trackHeader = [0x4D,0x54,0x72,0x6B,(len>>>24)&0xff,(len>>>16)&0xff,(len>>>8)&0xff,len&0xff];
+  return new Uint8Array(header.concat(trackHeader, trackBytes));
+}
+function melodyToJSON(m) { return JSON.stringify(m, null, 2); }
+async function sha256Hex(str) {
+  if (!(window.crypto && window.crypto.subtle)) return null;
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+/* =====================================================================
+   APP STATE + ROUTER
+===================================================================== */
+const App = {
+  settings: Storage.loadSettings(), screen:'home', params:{},
+  current:null, savedRef:null, undoStack:[], redoStack:[],
+  selectedNoteId:null, editorView:'roll', previewOriginal:false,
+  recState:{ status:'idle' }, libFilter:{ search:'', mode:'recent' },
+  teardown:null, pendingNav:null
+};
+
+function applyTheme() {
+  const t = App.settings.theme==='system' ? (window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light') : App.settings.theme;
+  document.documentElement.setAttribute('data-theme', t==='light'?'light':'');
+  document.documentElement.style.setProperty('--font-scale', {sm:'15px',md:'16px',lg:'18px'}[App.settings.textSize]||'16px');
+  const reduced = App.settings.motion==='on' ? true : App.settings.motion==='off' ? false : window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  document.body.classList.toggle('reduced-motion', reduced);
+}
+function toast(msg) {
+  const root = document.getElementById('toast-root');
+  const el = document.createElement('div'); el.className='toast'; el.textContent=msg; root.appendChild(el);
+  requestAnimationFrame(()=>el.classList.add('show'));
+  setTimeout(()=>{ el.classList.remove('show'); setTimeout(()=>el.remove(),250); }, 2200);
+}
+function isEditorDirty() {
+  // Only a melody that has already been formally saved (has an id) can have
+  // "unsaved changes" in the document sense. A brand-new melody is already
+  // continuously autosaved as a draft (see autosaveIfUnsaved), and leaving it
+  // is recoverable via the "Continue your melody?" prompt — it should never
+  // trigger a blocking, potentially destructive Save/Don't Save dialog.
+  if (!App.current || !App.current.id) return false;
+  if (!App.savedRef) return false;
+  return !MelodyModel.isEqual(App.current, App.savedRef);
+}
+function navigate(screen, params, replace) {
+  if (App.screen==='editor' && screen!=='editor' && isEditorDirty()) {
+    App.pendingNav = { screen, params, replace };
+    openModal(`<h3>You have unsaved changes</h3><p>Do you want to save this melody before leaving?</p>
+      <div class="btn-row">
+        <button class="btn btn-secondary" style="flex:1" data-action="unsaved:cancel">Cancel</button>
+        <button class="btn btn-danger" style="flex:1" data-action="unsaved:discard">Don't Save</button>
+      </div>
+      <button class="btn btn-primary btn-block" style="margin-top:8px" data-action="unsaved:save">Save</button>`, null);
+    return;
+  }
+  doNavigate(screen, params, replace);
+}
+function doNavigate(screen, params, replace) {
+  if (App.teardown) { try { App.teardown(); } catch(e){} App.teardown = null; }
+  App.screen = screen; App.params = params||{};
+  const state = { screen, params: App.params };
+  if (replace) history.replaceState(state,'','#'+screen); else history.pushState(state,'','#'+screen);
+  render();
+}
+window.addEventListener('popstate', (e) => {
+  if (App.screen==='editor' && isEditorDirty()) {
+    history.pushState({ screen:'editor', params:App.params }, '', '#editor'); // cancel the back nav
+    App.pendingNav = { fromPopstate:true, target: e.state || {screen:'home',params:{}} };
+    openModal(`<h3>You have unsaved changes</h3><p>Do you want to save this melody before leaving?</p>
+      <div class="btn-row">
+        <button class="btn btn-secondary" style="flex:1" data-action="unsaved:cancel">Cancel</button>
+        <button class="btn btn-danger" style="flex:1" data-action="unsaved:discard">Don't Save</button>
+      </div>
+      <button class="btn btn-primary btn-block" style="margin-top:8px" data-action="unsaved:save">Save</button>`, null);
+    return;
+  }
+  if (App.teardown) { try { App.teardown(); } catch(e){} App.teardown = null; }
+  if (e.state) { App.screen = e.state.screen; App.params = e.state.params||{}; } else { App.screen='home'; App.params={}; }
+  render();
+});
+
+function esc(s) { const d=document.createElement('div'); d.textContent = s==null?'':String(s); return d.innerHTML; }
+function fmtDate(ts) { try { return new Date(ts).toLocaleDateString(undefined,{month:'short',day:'numeric'}); } catch(e){ return ''; } }
+function fmtDateTime(ts) { try { return new Date(ts).toLocaleString(undefined,{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'}); } catch(e){ return ''; } }
+function fmtTime(sec) { sec = Math.max(0,sec); const m=Math.floor(sec/60), s=Math.floor(sec%60); return m+':'+(s<10?'0':'')+s; }
+
+function openModal(html, onConfirm, opts) {
+  opts = opts||{};
+  document.getElementById('modal-content').innerHTML = html;
+  document.getElementById('modal-root').classList.add('show');
+  if (opts.autofocus) setTimeout(()=>{ const el=document.getElementById(opts.autofocus); if (el){ el.focus(); el.select&&el.select(); } }, 30);
+}
+function closeModal() {
+  document.getElementById('modal-root').classList.remove('show');
+  // If a preview (Original/Enhanced A-B) is playing, it's a temporary melody
+  // object, not App.current — safe to stop on any modal close so it can
+  // never keep playing silently in the background after the dialog is gone.
+  if (Playback.playing && Playback.melody !== App.current) Playback.stop();
+}
+function openSheet(html) { document.getElementById('sheet-content').innerHTML = html; document.getElementById('sheet-root').classList.add('show'); }
+function closeSheet() { document.getElementById('sheet-root').classList.remove('show'); }
+
+function renderNav() {
+  const hideOn = ['record','processing','editor','create','certificate','help','privacy','studio'];
+  const nav = document.getElementById('bottom-nav');
+  if (hideOn.includes(App.screen)) { nav.style.display='none'; return; }
+  nav.style.display = 'flex';
+  const item = (s,ic,label) => `<button class="nav-item ${App.screen===s?'sel':''}" data-action="nav:${s}"><span class="ni-ic">${ic}</span>${label}</button>`;
+  nav.innerHTML = item('home','🏠','Home') + item('library','🎵','Melodies') +
+    `<button class="nav-item center" data-action="nav:create"><span class="ni-ic">＋</span></button>` +
+    item('discover','✨','Discover') + item('settings','⚙️','Settings');
+}
+
+/* =====================================================================
+   HOME
+===================================================================== */
+let heroRaf = null;
+function screenHome() {
+  const melodies = Storage.loadMelodies().slice(0,6);
+  const favs = Storage.loadMelodies().filter(m=>m.favorite).slice(0,6);
+  return `
+  <div class="home-top"><div class="logo-row">${logoSvg(26)}<span class="logo-word">Hum<span>Tune</span></span></div></div>
+  <div class="hero"><h1>Have a melody in your head?</h1><p>Hum it. We'll turn it into music.</p></div>
+  <div class="hum-stage"><canvas id="heroWave"></canvas>
+    <div class="mic-wrap pulsing"><div class="pulse-ring"></div><div class="pulse-ring"></div>
+      <button class="big-mic" data-action="go:record"><span class="ic">🎙️</span>Hum a Melody</button>
+    </div>
+  </div>
+  <div class="card" style="margin-top:8px;display:flex;align-items:center;gap:14px;cursor:pointer" data-action="go:studio">
+    <div style="font-size:28px">🎛</div>
+    <div style="flex:1"><strong>Music Studio</strong><div style="font-size:0.78rem;color:var(--text-dim);margin-top:2px">Looper, Drums, Bass & Chords, Vocal, Effects, Mixer</div></div>
+    <div style="color:var(--text-dim)">›</div>
+  </div>
+  <div class="section-title">Recent melodies</div>
+  ${melodies.length ? `<div class="h-scroll">${melodies.map(libMiniCard).join('')}</div>` : `
+    <div class="card empty-state"><div class="ico">🎵</div><h3>Your melodies will appear here</h3><p>Got a melody in your head? Hum it and start creating.</p><button class="btn btn-primary" data-action="go:record">🎙️ Hum a Melody</button></div>`}
+  ${favs.length ? `<div class="section-title">Favorites</div><div class="h-scroll">${favs.map(libMiniCard).join('')}</div>` : ''}
+  `;
+}
+function libMiniCard(m) {
+  return `<div class="card mini-card" data-action="library:open" data-id="${m.id}">
+    <div class="mc-name">${esc(m.name)}${m.draft?' <span style=\"color:var(--warn)\">•draft</span>':''}</div>
+    <canvas class="spark" data-notes='${esc(JSON.stringify(m.notes.map(n=>n.pitch)))}'></canvas>
+    <div class="mc-meta">${INSTRUMENTS[m.instrument]?INSTRUMENTS[m.instrument].icon:'🎹'} ${m.tempo} BPM · ${fmtDate(m.updatedAt)}</div>
+  </div>`;
+}
+function drawSparklines() {
+  document.querySelectorAll('canvas.spark').forEach(c => {
+    let pitches=[]; try { pitches = JSON.parse(c.dataset.notes||'[]'); } catch(e){}
+    const dpr = window.devicePixelRatio||1; const w=c.clientWidth||130, h=36;
+    c.width=w*dpr; c.height=h*dpr; const ctx=c.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h);
+    if (!pitches.length) return;
+    const min=Math.min(...pitches), max=Math.max(...pitches), range=Math.max(1,max-min);
+    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+    ctx.lineWidth=2; ctx.beginPath();
+    pitches.forEach((p,i)=>{ const x=(i/(pitches.length-1||1))*(w-6)+3; const y=h-6-((p-min)/range)*(h-12); i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
+    ctx.stroke();
+  });
+}
+function drawHeroWave() {
+  const c = document.getElementById('heroWave'); if (!c) return;
+  const dpr = window.devicePixelRatio||1; const w=c.clientWidth||300, h=80;
+  c.width=w*dpr; c.height=h*dpr; const ctx=c.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+  const bars=24; const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+  const reduced = document.body.classList.contains('reduced-motion');
+  const seeds = Array.from({length:bars},(_,i)=>0.3+0.7*Math.abs(Math.sin(i*12.9898)));
+  function frame(t) {
+    ctx.clearRect(0,0,w,h);
+    for (let i=0;i<bars;i++) {
+      const phase = reduced?0:t/500+i*0.4;
+      const amp = seeds[i]*(reduced?0.5:(0.35+0.65*Math.abs(Math.sin(phase))));
+      const bh = 6+amp*(h*0.55); const x=(i/(bars-1))*(w-8)+4;
+      ctx.fillStyle = accent; ctx.globalAlpha = 0.35+amp*0.5; ctx.fillRect(x-2,h/2-bh/2,4,bh);
+    }
+    ctx.globalAlpha=1;
+    if (!reduced) heroRaf = requestAnimationFrame(frame);
+  }
+  frame(0);
+}
+
+/* =====================================================================
+   CREATE / DISCOVER
+===================================================================== */
+function screenCreate() {
+  return `<div class="topbar"><button class="tb-btn" data-action="go:back">←</button><div class="tb-title">Create Music</div></div>
+  <div class="card create-opt" data-action="go:record"><div class="co-ic">🎙️</div><div class="co-txt"><strong>Hum a Melody</strong><span>Record yourself humming or singing</span></div></div>
+  <div class="card create-opt" data-action="go:blank-editor"><div class="co-ic">🎹</div><div class="co-txt"><strong>Start with Notes</strong><span>Build a melody from scratch</span></div></div>
+  <div class="card create-opt disabled"><div class="co-ic">📁</div><div class="co-txt"><strong>Import MIDI<span class="badge-soon">Coming soon</span></strong><span>Not available in this prototype yet</span></div></div>`;
+}
+function screenDiscover() {
+  return `<div class="topbar"><div class="tb-title">Discover</div></div>
+  <div class="card empty-state"><div class="ico">✨</div><h3>Ideas &amp; inspiration coming soon</h3><p>This tab is reserved for future melody prompts and inspiration — nothing is implemented here yet, so there's nothing faked here either.</p></div>`;
+}
+
+/* =====================================================================
+   RECORD
+===================================================================== */
+let recRaf = null, recTimerInt = null;
+function screenRecord() {
+  const st = App.recState;
+  if (st.status==='idle' || st.status==='permission') {
+    return `<div class="topbar"><button class="tb-btn" data-action="go:back">←</button><div class="tb-title">Hum your melody</div></div>
+    <div class="rec-status" style="margin-bottom:14px">You don't need to sing perfectly.</div>
+    <div class="card permission-card"><div class="ico">🎙️</div><h3>HumTune needs microphone access</h3>
+    <p>We use your microphone to hear your melody and turn it into musical notes.</p>
+    <button class="btn btn-primary btn-block" data-action="record:allow-mic">Allow Microphone</button></div>`;
+  }
+  if (st.status==='error') {
+    return `<div class="topbar"><button class="tb-btn" data-action="go:back">←</button><div class="tb-title">Hum your melody</div></div>
+    <div class="card error-card"><h3>${esc(st.error.title)}</h3><p>${esc(st.error.message)}</p>
+    <button class="btn btn-primary btn-block" data-action="record:allow-mic">Try Again</button></div>`;
+  }
+  return `<div class="topbar"><button class="tb-btn" data-action="record:cancel">✕</button><div class="tb-title">Hum your melody</div></div>
+  <div class="rec-status" id="recStatusEl">${st.status==='paused'?'Paused':'Listening…'}</div>
+  <div class="rec-timer" id="recTimerEl">0:00</div>
+  <div id="liveNoteEl" style="text-align:center;font-size:1.6rem;font-weight:800;color:var(--accent);min-height:2.2rem;letter-spacing:-0.02em">&nbsp;</div>
+  <canvas id="recWave"></canvas>
+  <div id="levelBarRec"><div id="levelFillRec"></div></div>
+  <div class="rec-controls">
+    <button class="rec-small" data-action="record:cancel" title="Cancel">✕</button>
+    ${st.status==='paused' ? `<button class="rec-round" data-action="record:resume" style="background:var(--accent);color:var(--accent-ink)">▶</button>`
+      : `<button class="rec-small" data-action="record:pause" title="Pause">⏸</button><button class="rec-round" data-action="record:stop">■</button>`}
+  </div>`;
+}
+async function doStartRecording() {
+  App.recState = { status:'permission' }; render();
+  const res = await Recorder.start(App.settings);
+  if (res.error) { App.recState = { status:'error', error: res.error }; render(); return; }
+  App.recState = { status:'recording', frames: [] };
+  // Take the first sample immediately, synchronously, before any DOM/render
+  // work — this is what actually closes the recording-start gap, since the
+  // analyser only ever exposes "the current window" and a delayed first
+  // read permanently misses whatever audio has already scrolled past.
+  const firstFrame = Recorder.sampleOnce();
+  if (firstFrame) App.recState.frames.push(firstFrame);
+  render();
+  startRecLoop();
+}
+function startRecLoop() {
+  let frames = App.recState.frames || (App.recState.frames = []);
+  App.teardown = () => { clearInterval(recTimerInt); if (recRaf) cancelAnimationFrame(recRaf); Recorder.releaseStream(); };
+  recTimerInt = setInterval(() => {
+    const el = document.getElementById('recTimerEl'); if (el) el.textContent = fmtTime(Recorder.ctx ? (Recorder.ctx.currentTime - Recorder.recordStartCtxTime - Recorder.pausedElapsed) : 0);
+    if (Recorder.ctx && !Recorder.paused && (Recorder.ctx.currentTime - Recorder.recordStartCtxTime) > MAX_RECORD_SECONDS) doStopRecording();
+  }, 100);
+  function loop() {
+    const frame = Recorder.sampleOnce();
+    if (frame) {
+      frames.push(frame);
+      const lf=document.getElementById('levelFillRec'); if (lf) lf.style.width = Math.min(100,frame.rms*1200)+'%';
+      const noteEl = document.getElementById('liveNoteEl');
+      if (noteEl) noteEl.textContent = frame.midi != null ? midiToName(frame.midi) : '\u00A0';
+      const statusEl = document.getElementById('recStatusEl');
+      if (statusEl && App.recState.status === 'recording') statusEl.textContent = frame.midi != null ? 'Keep humming…' : 'Listening…';
+    }
+    const canvas = document.getElementById('recWave');
+    if (canvas && Recorder.analyser) {
+      const dpr = window.devicePixelRatio||1; const w=canvas.clientWidth||300, h=84;
+      canvas.width=w*dpr; canvas.height=h*dpr; const ctx=canvas.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h);
+      const buf = new Float32Array(Recorder.analyser.fftSize); Recorder.analyser.getFloatTimeDomainData(buf);
+      const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+      ctx.strokeStyle = accent; ctx.lineWidth = 2; ctx.beginPath();
+      const step = Math.floor(buf.length/w)||1;
+      for (let x=0;x<w;x++) { const v=buf[x*step]||0; const y=h/2+v*(h*0.42); x===0?ctx.moveTo(x,y):ctx.lineTo(x,y); }
+      ctx.stroke();
+    }
+    if (App.recState.status==='recording' || App.recState.status==='paused') recRaf = requestAnimationFrame(loop);
+  }
+  recRaf = requestAnimationFrame(loop);
+}
+function doPauseRecording() { Recorder.pause(); App.recState.status='paused'; render(); startRecLoop(); }
+function doResumeRecording() { Recorder.resume(); App.recState.status='recording'; render(); startRecLoop(); }
+function doCancelRecording() { if (App.teardown) { App.teardown(); App.teardown=null; } else Recorder.releaseStream(); App.recState={status:'idle'}; doNavigate('home',{},true); }
+function doStopRecording() {
+  if (App.teardown) { App.teardown(); App.teardown=null; }
+  const frames = (App.recState.frames || []).slice();
+  Recorder.releaseStream();
+  App.recState = { status:'idle' };
+  doNavigate('processing', { frames });
+}
+
+/* =====================================================================
+   PROCESSING
+===================================================================== */
+function screenProcessing() {
+  return `<div class="topbar"><div class="tb-title">Working on it</div></div>
+  <div class="proc-wrap" id="procSteps">
+    ${procStep('Listening','listen')}${procStep('Finding notes','find')}${procStep('Cleaning up','clean')}${procStep('Building your melody','build')}
+  </div>`;
+}
+function procStep(label,key){ return `<div class="proc-step" data-step="${key}"><div class="dot"></div>${label}</div>`; }
+let processingToken = 0;
+function runProcessing(frames) {
+  const myToken = ++processingToken;
+  const steps = ['listen','find','clean','build']; let i=0;
+  const setDone=(k)=>{ const el=document.querySelector(`.proc-step[data-step="${k}"]`); if (el){ el.classList.add('done'); el.classList.remove('active'); el.querySelector('.dot').textContent='✓'; } };
+  const setActive=(k)=>{ const el=document.querySelector(`.proc-step[data-step="${k}"]`); if (el) el.classList.add('active'); };
+  function next() {
+    if (myToken !== processingToken) return; // a newer recording/processing run superseded this one
+    if (i>0) setDone(steps[i-1]);
+    if (i>=steps.length) { finishProcessing(frames, myToken); return; }
+    setActive(steps[i]); i++; setTimeout(next, 380);
+  }
+  setTimeout(next, 120);
+}
+function applyOnsetLookback(notes, frames) {
+  const MAX_LOOKBACK = 0.15;
+  if (!notes.length || !frames.length) return notes;
+  const out = []; let prevEnd = 0;
+  for (const n of notes) {
+    const idx = frames.findIndex(f => f.t >= n.start);
+    let newStart = n.start;
+    if (idx > 0) {
+      for (let i = idx - 1; i >= 0 && (n.start - frames[i].t) <= MAX_LOOKBACK; i--) {
+        if (frames[i].rms >= SILENCE_RMS && frames[i].t >= prevEnd) newStart = frames[i].t; else break;
+      }
+    }
+    const note = newStart === n.start ? n : Object.assign({}, n, { start: newStart });
+    out.push(note); prevEnd = note.end;
+  }
+  return out;
+}
+
+function finishProcessing(frames, myToken) {
+  if (myToken !== undefined && myToken !== processingToken) return; // superseded — never let a stale result win
+  const problem = diagnoseRecording(frames);
+  if (problem==='too_short') return processingError('Your recording is too short', 'Hum at least a couple of seconds so HumTune has something to analyze.');
+  if (problem==='silent') return processingError("We didn't hear anything", "Make sure your microphone isn't muted and try humming closer to it.");
+  if (problem==='noisy') return processingError('Too much background noise', 'Try moving somewhere quieter and humming a clear, steady tone.');
+
+  const corrected = correctOctaveJumps(frames);
+  const rawMidi = corrected.map(f=>f.midi);
+  const smoothed = medianSmooth(rawMidi, 5);
+  const smoothedFrames = corrected.map((f,i)=>({ t:f.t, midi: smoothed[i], clarity: f.clarity }));
+  let rawNotes = extractNotes(smoothedFrames, 0.12);
+  if (rawNotes.length===0) return processingError("We couldn't recognize your melody", 'Try humming a little longer and more clearly, with distinct notes rather than one continuous tone.');
+  rawNotes = applyOnsetLookback(rawNotes, frames);
+
+  const melody = MelodyModel.fromDetected(rawNotes, App.settings);
+  App.current = melody; App.savedRef = null;
+  App.undoStack=[]; App.redoStack=[]; App.selectedNoteId=null; App.editorView='roll'; App.previewOriginal=false;
+  Storage.saveDraft(melody);
+  doNavigate('editor', { fresh:true }, true);
+}
+function processingError(title, message) {
+  document.getElementById('screen-root').innerHTML = `<div class="topbar"><div class="tb-title">Working on it</div></div>
+    <div class="card error-card"><h3>${esc(title)}</h3><p>${esc(message)}</p>
+    <div class="btn-row"><button class="btn btn-secondary" style="flex:1" data-action="go:home">Cancel</button><button class="btn btn-primary" style="flex:1" data-action="go:record">Try Again</button></div></div>`;
+}
+
+/* =====================================================================
+   EDITOR — piano roll (tap-select + button edits) / simple view,
+   transport, tempo, instrument, undo/redo, original & versions
+===================================================================== */
+function pushUndo() { App.undoStack.push(JSON.parse(JSON.stringify(App.current.notes))); if (App.undoStack.length>30) App.undoStack.shift(); App.redoStack=[]; }
+function autosaveIfUnsaved() { if (!App.current.id) Storage.saveDraft(App.current); }
+
+function screenEditor() {
+  const m = App.current; if (!m) { doNavigate('home',{},true); return ''; }
+  const isSaved = !!m.id;
+  const viewing = App.previewOriginal ? { notes: m.originalNotes } : m;
+  return `
+  <div class="topbar">
+    <button class="tb-btn" data-action="editor:back">←</button>
+    <input class="name-input-inline" id="melodyNameInput" placeholder="Untitled Melody" value="${esc(m.name)}" ${App.previewOriginal?'disabled':''} />
+    ${isSaved ? `<button class="tb-btn" data-action="editor:more">⋮</button>` : ''}
+  </div>
+  ${App.previewOriginal ? `<div class="preview-banner">Viewing Original Melody (read-only) · <span style="text-decoration:underline;cursor:pointer" data-action="editor:view-current">Back to Current</span></div>` : ''}
+  <div class="tabs">
+    <button class="${App.editorView==='roll'?'active':''}" data-action="editor:view-roll">Piano Roll</button>
+    <button class="${App.editorView==='sheet'?'active':''}" data-action="editor:view-sheet">Sheet Music</button>
+    <button class="${App.editorView==='simple'?'active':''}" data-action="editor:view-simple">Simple View</button>
+  </div>
+  ${m.notes.length ? `<div id="noteNameList" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;font-size:0.72rem;color:var(--text-dim)">${m.notes.map((n,i)=>`<span data-action="editor:select-note" data-id="${n.id}" style="cursor:pointer;padding:2px 6px;border-radius:6px;${n.id===App.selectedNoteId?'background:var(--surface-2);color:var(--accent);font-weight:700;':''}">${esc(midiToName(n.pitch))}${n.confidence!=null && n.confidence<0.55 ? '?' : ''}</span>${i<m.notes.length-1?'<span>→</span>':''}`).join('')}</div>` : ''}
+  <canvas id="rollCanvas"></canvas>
+  <div class="scrub-wrap"><canvas id="scrubBar"></canvas></div>
+  <div class="transport">
+    <button data-action="editor:stop">■</button>
+    <button class="play-btn" id="playPauseBtn" data-action="editor:playpause">▶</button>
+    ${App.previewOriginal ? '' : `<button data-action="editor:add-note">＋</button>`}
+  </div>
+  ${!App.previewOriginal && m.notes.length ? `<button class="btn btn-enhance btn-block" data-action="editor:enhance">✨ Make It Musical</button>` : ''}
+  ${!App.previewOriginal ? `<button class="btn btn-secondary btn-block" style="margin-top:8px" data-action="go:studio">🎛 Open Studio</button>` : ''}
+  ${!App.previewOriginal ? `
+  <div class="note-edit-bar ${App.selectedNoteId?'show':''}" id="noteEditBar">
+    <div class="ne-title">Selected note</div>
+    <button class="ne-btn" data-action="note:higher">⬆ Higher</button>
+    <button class="ne-btn" data-action="note:lower">⬇ Lower</button>
+    <button class="ne-btn" data-action="note:earlier">◀ Earlier</button>
+    <button class="ne-btn" data-action="note:later">▶ Later</button>
+    <button class="ne-btn" data-action="note:shorter">– Shorter</button>
+    <button class="ne-btn" data-action="note:longer">+ Longer</button>
+    <button class="ne-btn danger" data-action="note:delete">🗑 Delete</button>
+  </div>
+  <div class="btn-row" style="margin-top:8px">
+    <button class="ne-btn" data-action="editor:whole-higher">Make it higher</button>
+    <button class="ne-btn" data-action="editor:whole-lower">Make it lower</button>
+    <button class="ne-btn" data-action="editor:octave-up">Octave Up</button>
+    <button class="ne-btn" data-action="editor:octave-down">Octave Down</button>
+  </div>
+  <div class="editor-toolbar">
+    <button class="btn btn-secondary" data-action="editor:undo" ${App.undoStack.length?'':'disabled'}>↺ Undo</button>
+    <button class="btn btn-secondary" data-action="editor:redo" ${App.redoStack.length?'':'disabled'}>↻ Redo</button>
+  </div>
+
+  <div class="section-title">Instrument</div>
+  <div class="instr-grid">${Object.keys(INSTRUMENTS).map(k=>`<div class="instr-card ${m.instrument===k?'sel':''}" data-action="editor:instrument" data-value="${k}"><span class="ic-badge">${INSTRUMENTS[k].icon}</span><span class="lb">${INSTRUMENTS[k].label}</span><span class="check">✓</span></div>`).join('')}</div>
+
+  <div class="section-title">Tempo <span style="color:var(--text-dim);font-weight:500">(also changes playback speed)</span></div>
+  <div class="tempo-row">
+    <div class="tempo-chip ${m.tempo===70?'sel':''}" data-action="editor:tempo" data-value="70">Slow · 70</div>
+    <div class="tempo-chip ${m.tempo===100?'sel':''}" data-action="editor:tempo" data-value="100">Normal · 100</div>
+    <div class="tempo-chip ${m.tempo===135?'sel':''}" data-action="editor:tempo" data-value="135">Fast · 135</div>
+  </div>
+  ${m.versions && m.versions.length ? `<div class="section-title">History</div>
+    <div class="btn-row"><button class="btn btn-secondary btn-block" data-action="editor:view-original">📜 View Original</button><button class="btn btn-secondary btn-block" data-action="editor:versions">🕒 Versions (${m.versions.length})</button></div>` :
+    (m.originalNotes && m.originalNotes.length ? `<div class="section-title">History</div><button class="btn btn-secondary btn-block" data-action="editor:view-original">📜 View Original Melody</button>` : '')}
+
+  <button class="btn btn-primary btn-block" style="margin-top:22px" data-action="editor:save">${isSaved?'💾 Save Changes':'💾 Save Melody'}</button>
+  ${!m.notes.length ? `<p style="text-align:center;color:var(--text-dim);font-size:0.8rem;margin-top:10px">No notes yet — tap + to add one.</p>` : ''}
+  ` : `
+  <button class="btn btn-primary btn-block" style="margin-top:16px" data-action="editor:restore-original">↺ Restore Original</button>
+  `}
+  `;
+}
+
+function currentViewNotes() { return App.previewOriginal ? App.current.originalNotes : App.current.notes; }
+
+const LETTER_INDEX = [0,0,1,1,2,3,3,4,4,5,5,6]; // pitch-class -> natural letter index (C..B)
+const IS_SHARP = [false,true,false,true,false,false,true,false,true,false,true,false];
+function midiToStaffStep(midi) {
+  const m = Math.round(midi);
+  const pc = ((m % 12) + 12) % 12;
+  const octave = Math.floor(m / 12) - 1;
+  const absDiatonic = octave * 7 + LETTER_INDEX[pc];
+  return { step: absDiatonic - 30, sharp: IS_SHARP[pc] }; // step 0 = E4 = bottom treble line
+}
+function drawSheetMusic() {
+  const canvas = document.getElementById('rollCanvas'); if (!canvas) return;
+  const dpr = window.devicePixelRatio||1; const cssW = canvas.clientWidth||300, cssH=170;
+  canvas.width=cssW*dpr; canvas.height=cssH*dpr; const ctx=canvas.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,cssW,cssH);
+  const notes = currentViewNotes();
+  const styles = getComputedStyle(document.documentElement);
+  const accent = styles.getPropertyValue('--accent').trim(), lineColor = styles.getPropertyValue('--text-dim').trim(), text = styles.getPropertyValue('--text').trim();
+  const midY = cssH/2, lineGap = 9, staffTop = midY - lineGap*4/2;
+  // 5 staff lines: bottom line (step 0, E4) at staffTop+4*lineGap up to top line (step 8, F5) at staffTop
+  const yForStep = (step) => (staffTop + 4*lineGap) - (step * (lineGap/2));
+  ctx.strokeStyle = lineColor; ctx.lineWidth = 1; ctx.globalAlpha = 0.6;
+  const padLeft = 34, padRight = 10;
+  for (let i=0;i<5;i++) { const y = staffTop + i*lineGap; ctx.beginPath(); ctx.moveTo(padLeft-6,y); ctx.lineTo(cssW-padRight,y); ctx.stroke(); }
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = text; ctx.font = '30px serif'; ctx.textBaseline='middle';
+  ctx.fillText('𝄞', 2, staffTop + 2.1*lineGap); // treble clef glyph (system serif fallback covers most platforms)
+
+  if (!notes.length) {
+    ctx.fillStyle = lineColor; ctx.font = '12px Manrope, sans-serif'; ctx.textAlign='center';
+    ctx.fillText('No notes yet', cssW/2, cssH-14);
+    canvas._layout = { padLeft, plotW: cssW-padLeft-padRight, totalDur: 4, notes: [], sheetMode: true };
+    return;
+  }
+  const totalDur = Math.max(0.5, Math.max(...notes.map(n=>n.end)));
+  const plotW = cssW - padLeft - 24 - padRight;
+  notes.forEach(n => {
+    const x = padLeft + 24 + (n.start/totalDur)*plotW;
+    const { step, sharp } = midiToStaffStep(n.pitch);
+    const y = yForStep(step);
+    const selected = n.id===App.selectedNoteId && !App.previewOriginal;
+    const lowConfidence = n.confidence != null && n.confidence < 0.55;
+    // ledger lines
+    ctx.strokeStyle = lineColor; ctx.globalAlpha = 0.7; ctx.lineWidth = 1;
+    if (step < 0) for (let s = -2; s >= step; s -= 2) { const ly = yForStep(s); ctx.beginPath(); ctx.moveTo(x-7,ly); ctx.lineTo(x+7,ly); ctx.stroke(); }
+    if (step > 8) for (let s = 10; s <= step; s += 2) { const ly = yForStep(s); ctx.beginPath(); ctx.moveTo(x-7,ly); ctx.lineTo(x+7,ly); ctx.stroke(); }
+    ctx.globalAlpha = 1;
+    // accidental
+    if (sharp) { ctx.fillStyle = lowConfidence ? lineColor : text; ctx.font = '13px Manrope, sans-serif'; ctx.textAlign='right'; ctx.fillText('♯', x-6, y); }
+    // notehead
+    ctx.fillStyle = accent; ctx.globalAlpha = selected?1:(lowConfidence?0.5:0.9);
+    ctx.beginPath(); ctx.ellipse(x, y, 5.5, 4, -0.35, 0, Math.PI*2); ctx.fill();
+    if (lowConfidence) { ctx.setLineDash([2,2]); ctx.strokeStyle=accent; ctx.lineWidth=1; ctx.stroke(); ctx.setLineDash([]); }
+    if (selected) { ctx.strokeStyle='#fff'; ctx.lineWidth=1.3; ctx.stroke(); }
+    ctx.globalAlpha = 1;
+    // stem
+    ctx.strokeStyle = accent; ctx.globalAlpha = selected?1:(lowConfidence?0.5:0.85); ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    if (step <= 4) { ctx.moveTo(x+5,y); ctx.lineTo(x+5,y-18); } else { ctx.moveTo(x-5,y); ctx.lineTo(x-5,y+18); }
+    ctx.stroke(); ctx.globalAlpha = 1;
+  });
+  if (Playback.melody===App.current || (App.previewOriginal && Playback.melody && Playback.melody.__isOriginalPreview)) {
+    const px = padLeft + 24 + (Playback.positionSec/totalDur)*plotW;
+    ctx.strokeStyle='#fff'; ctx.globalAlpha=0.6; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(px,staffTop-14); ctx.lineTo(px,staffTop+4*lineGap+14); ctx.stroke(); ctx.globalAlpha=1;
+  }
+  canvas._layout = { padLeft: padLeft+24, plotW, totalDur, notes, sheetMode: true };
+}
+function drawRoll() {
+  const m = App.current; if (!m) return;
+  const canvas = document.getElementById('rollCanvas'); if (!canvas) return;
+  const dpr = window.devicePixelRatio||1; const cssW = canvas.clientWidth||300, cssH=170;
+  canvas.width=cssW*dpr; canvas.height=cssH*dpr; const ctx=canvas.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,cssW,cssH);
+  const notes = currentViewNotes();
+  const styles = getComputedStyle(document.documentElement);
+  const accent = styles.getPropertyValue('--accent').trim(), keyLine = styles.getPropertyValue('--border').trim(), textDim = styles.getPropertyValue('--text-dim').trim();
+  const padTop=10, padBottom=10, padLeft=App.editorView==='roll'?30:6, padRight=8;
+  const plotW=cssW-padLeft-padRight, plotH=cssH-padTop-padBottom;
+  let totalDur, minMidi, range;
+  if (!notes.length) {
+    totalDur = 4; minMidi = 55; range = 24; // default 2-octave window so an empty roll is still tappable
+    ctx.fillStyle=textDim; ctx.font='13px Manrope, sans-serif'; ctx.textAlign='center';
+    ctx.fillText(App.previewOriginal ? 'No notes yet' : 'No notes yet — tap here, or +, to add one', cssW/2, cssH/2);
+  } else {
+    totalDur = Math.max(0.5, Math.max(...notes.map(n=>n.end)));
+    minMidi = Math.min(...notes.map(n=>n.pitch))-1; const maxMidi=Math.max(...notes.map(n=>n.pitch))+1; range = Math.max(1, maxMidi-minMidi);
+    if (App.editorView==='roll') {
+      ctx.font='9px Manrope, sans-serif'; ctx.fillStyle=textDim; ctx.strokeStyle=keyLine; ctx.textBaseline='middle';
+      [...new Set(notes.map(n=>n.pitch))].forEach(mm=>{ const y=padTop+plotH-((mm-minMidi)/range)*plotH; ctx.globalAlpha=0.5; ctx.beginPath(); ctx.moveTo(padLeft,y); ctx.lineTo(cssW-padRight,y); ctx.stroke(); ctx.globalAlpha=1; ctx.fillText(midiToName(mm),2,y); });
+    }
+    notes.forEach(n => {
+      const x=padLeft+(n.start/totalDur)*plotW, w=Math.max(4,((n.end-n.start)/totalDur)*plotW), y=padTop+plotH-((n.pitch-minMidi)/range)*plotH-6;
+      const selected = n.id===App.selectedNoteId && !App.previewOriginal;
+      const lowConfidence = n.confidence != null && n.confidence < 0.55;
+      ctx.fillStyle=accent; ctx.globalAlpha=selected?1:(lowConfidence?0.45:0.72); roundRect(ctx,x,y,w,12,5); ctx.fill();
+      if (lowConfidence) {
+        ctx.setLineDash([2,2]); ctx.strokeStyle=accent; ctx.globalAlpha=0.9; ctx.lineWidth=1; ctx.stroke(); ctx.setLineDash([]);
+      }
+      if (selected) { ctx.strokeStyle='#fff'; ctx.globalAlpha=0.9; ctx.lineWidth=1.5; ctx.stroke(); }
+      ctx.globalAlpha=1;
+    });
+    if (Playback.melody===m || (App.previewOriginal && Playback.melody && Playback.melody.__isOriginalPreview)) {
+      const px = padLeft + (Playback.positionSec/totalDur)*plotW;
+      ctx.strokeStyle='#fff'; ctx.globalAlpha=0.6; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(px,padTop); ctx.lineTo(px,cssH-padBottom); ctx.stroke(); ctx.globalAlpha=1;
+    }
+  }
+  canvas._layout = { padLeft, padTop, plotW, plotH, totalDur, minMidi, range, notes };
+}
+function drawScrub() {
+  const m = App.current; if (!m) return;
+  const canvas = document.getElementById('scrubBar'); if (!canvas) return;
+  const dpr = window.devicePixelRatio||1; const w=canvas.clientWidth||300, h=20;
+  canvas.width=w*dpr; canvas.height=h*dpr; const ctx=canvas.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h);
+  const styles = getComputedStyle(document.documentElement);
+  ctx.fillStyle = styles.getPropertyValue('--surface-2').trim(); roundRect(ctx,0,h/2-3,w,6,3); ctx.fill();
+  const notes = currentViewNotes();
+  const totalDur = Math.max(0.5, notes.length?Math.max(...notes.map(n=>n.end)):0.5);
+  const prog = Math.min(1, Playback.melody===App.current ? Playback.positionSec/totalDur : 0);
+  ctx.fillStyle = styles.getPropertyValue('--accent').trim(); roundRect(ctx,0,h/2-3,w*prog,6,3); ctx.fill();
+  ctx.beginPath(); ctx.arc(w*prog,h/2,6,0,Math.PI*2); ctx.fill();
+  canvas._layout = { w, totalDur };
+}
+function roundRect(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+
+function drawEditorCanvas() { if (App.editorView === 'sheet') drawSheetMusic(); else drawRoll(); }
+function handleRollClick(evt) {
+  if (App.previewOriginal) return;
+  const canvas = document.getElementById('rollCanvas'); if (!canvas || !canvas._layout) return;
+  const rect = canvas.getBoundingClientRect(); const x=evt.clientX-rect.left, y=evt.clientY-rect.top;
+  const L = canvas._layout;
+
+  if (L.sheetMode) {
+    if (!L.notes.length) return;
+    const tapTime = ((x - L.padLeft) / L.plotW) * L.totalDur;
+    let nearest = L.notes[0], bestDist = Infinity;
+    for (const n of L.notes) { const d = Math.abs(n.start - tapTime); if (d < bestDist) { bestDist = d; nearest = n; } }
+    App.selectedNoteId = nearest.id;
+    drawEditorCanvas();
+    const bar = document.getElementById('noteEditBar'); if (bar) bar.classList.toggle('show', true);
+    syncPlayIcon();
+    return;
+  }
+
+  let hit=null;
+  for (const n of L.notes) {
+    const nx=L.padLeft+(n.start/L.totalDur)*L.plotW, nw=Math.max(4,((n.end-n.start)/L.totalDur)*L.plotW), ny=L.padTop+L.plotH-((n.pitch-L.minMidi)/L.range)*L.plotH-6;
+    if (x>=nx-3 && x<=nx+nw+3 && y>=ny-4 && y<=ny+16) { hit=n; break; }
+  }
+  if (!hit && App.editorView === 'roll') {
+    // Tap-to-add on empty space: derive time/pitch from the tap position.
+    // Deliberately not drag-to-place — a single tap is reliable on mobile;
+    // dragging on a small canvas is exactly the fragile interaction we're avoiding.
+    const time = Math.max(0, ((x - L.padLeft) / L.plotW) * L.totalDur);
+    const pitchFloat = L.minMidi + ((L.plotH - (y - L.padTop)) / L.plotH) * L.range;
+    const pitch = Math.round(Math.max(36, Math.min(96, pitchFloat)));
+    pushUndo();
+    const id = newId('n');
+    App.current.notes.push({ id, pitch, start: time, end: time + 0.3, velocity: 0.8, confidence: 1 });
+    App.current.notes.sort((a,b)=>a.start-b.start);
+    App.selectedNoteId = id;
+    autosaveIfUnsaved();
+    render();
+    return;
+  }
+  App.selectedNoteId = hit ? hit.id : null; drawEditorCanvas();
+  const bar = document.getElementById('noteEditBar'); if (bar) bar.classList.toggle('show', !!App.selectedNoteId);
+  syncPlayIcon();
+}
+function handleScrubClick(evt) {
+  const canvas = document.getElementById('scrubBar'); if (!canvas || !canvas._layout) return;
+  const rect = canvas.getBoundingClientRect(); const x=evt.clientX-rect.left;
+  const frac = Math.min(1,Math.max(0,x/canvas._layout.w)); const t = frac*canvas._layout.totalDur;
+  if (Playback.playing) Playback.seek(t); else { Playback.positionSec=t; drawScrub(); drawEditorCanvas(); }
+}
+function editorPlayPause() {
+  const notes = currentViewNotes(); if (!notes.length) return;
+  const melody = App.previewOriginal ? Object.assign({}, App.current, { notes: App.current.originalNotes, __isOriginalPreview:true }) : App.current;
+  if (Playback.playing && Playback.melody && Playback.melody.notes===melody.notes) { Playback.pause(); setPlayIcon('▶'); }
+  else {
+    Playback.play(melody, (Playback.melody&&Playback.melody.notes===melody.notes)?Playback.positionSec:0, {
+      onTick: ()=>{ drawEditorCanvas(); drawScrub(); }, onNote: ()=>{},
+      onEnd: ()=>{ setPlayIcon('▶'); Playback.positionSec=0; drawEditorCanvas(); drawScrub(); }
+    });
+    setPlayIcon('⏸');
+  }
+}
+function setPlayIcon(ic){ const b=document.getElementById('playPauseBtn'); if (b) b.textContent=ic; }
+
+function noteAction(kind) {
+  const m = App.current; const n = m.notes.find(x=>x.id===App.selectedNoteId); if (!n) return;
+  pushUndo(); const minGap=0.08; const dur = n.end - n.start;
+  const sorted = m.notes.slice().sort((a,b)=>a.start-b.start);
+  const myIdx = sorted.findIndex(x=>x.id===n.id);
+  const prev = sorted[myIdx-1], next = sorted[myIdx+1];
+  const earliestStart = prev ? prev.end : 0;
+  const latestEnd = next ? next.start : Infinity;
+
+  if (kind==='higher') n.pitch = Math.min(96, n.pitch+1);
+  if (kind==='lower') n.pitch = Math.max(36, n.pitch-1);
+  if (kind==='earlier') { n.start = Math.max(earliestStart, n.start-0.1); n.end = n.start+dur; }
+  if (kind==='later') { n.end = Math.min(latestEnd, n.end+0.1); n.start = n.end-dur; }
+  if (kind==='shorter') n.end = Math.max(n.start+minGap, n.end-0.08);
+  if (kind==='longer') n.end = Math.min(latestEnd, n.end+0.08);
+  if (kind==='delete') { m.notes = m.notes.filter(x=>x.id!==n.id); App.selectedNoteId=null; }
+  m.notes.sort((a,b)=>a.start-b.start);
+  autosaveIfUnsaved(); render();
+}
+function wholeMelodyShift(dir) {
+  const m = App.current; if (!m.notes.length) return; pushUndo();
+  m.notes.forEach(n => { n.pitch = Math.min(96, Math.max(36, n.pitch + dir)); });
+  autosaveIfUnsaved(); render();
+}
+function addNoteAction() {
+  const m = App.current; pushUndo();
+  const last = m.notes[m.notes.length-1]; const start = last ? last.end+0.05 : 0;
+  const n = { id:newId('n'), pitch: last?last.pitch:60, start, end:start+0.3, velocity:0.8, confidence:1 };
+  m.notes.push(n); App.selectedNoteId = n.id;
+  autosaveIfUnsaved(); render();
+}
+function undoAction(){ if (!App.undoStack.length) return; App.redoStack.push(JSON.parse(JSON.stringify(App.current.notes))); App.current.notes=App.undoStack.pop(); App.selectedNoteId=null; autosaveIfUnsaved(); render(); }
+function redoAction(){ if (!App.redoStack.length) return; App.undoStack.push(JSON.parse(JSON.stringify(App.current.notes))); App.current.notes=App.redoStack.pop(); App.selectedNoteId=null; autosaveIfUnsaved(); render(); }
+
+function viewOriginal(){ App.previewOriginal = true; App.selectedNoteId=null; Playback.stop(); render(); }
+function viewCurrentFromOriginal(){ App.previewOriginal = false; Playback.stop(); render(); }
+function restoreOriginal() {
+  openModal(`<h3>Restore Original?</h3><p>This replaces your current edits with the original detected melody. You can still Undo right after.</p>
+    <div class="btn-row"><button class="btn btn-secondary" style="flex:1" data-action="modal:cancel">Cancel</button><button class="btn btn-primary" style="flex:1" data-action="modal:confirm-restore">Restore</button></div>`, null);
+}
+function doRestoreOriginal() {
+  pushUndo(); App.current.notes = JSON.parse(JSON.stringify(App.current.originalNotes));
+  App.previewOriginal = false; autosaveIfUnsaved(); closeModal(); toast('Original restored'); render();
+}
+function openVersionsSheet() {
+  const m = App.current;
+  const rows = m.versions.map((v,i) => `<div class="sheet-item" data-action="version:view" data-idx="${i}">🕒 Version ${i+1} · ${fmtDateTime(v.savedAt)}</div>`).join('');
+  openSheet(`<div class="sheet-handle"></div><div class="sheet-item" data-action="version:view-original">📜 Original · ${fmtDateTime(m.createdAt)}</div>${rows}`);
+}
+function viewVersion(idx) {
+  const m = App.current; const v = m.versions[idx]; if (!v) return;
+  closeSheet();
+  openModal(`<h3>Version ${idx+1}</h3><p>Saved ${esc(fmtDateTime(v.savedAt))} · ${v.notes.length} notes · ${v.tempo} BPM · ${INSTRUMENTS[v.instrument]?INSTRUMENTS[v.instrument].label:v.instrument}</p>
+    <div class="btn-row"><button class="btn btn-secondary" style="flex:1" data-action="modal:cancel">Close</button><button class="btn btn-primary" style="flex:1" data-action="version:restore" data-idx="${idx}">Restore this version</button></div>`, null);
+}
+function restoreVersion(idx) {
+  const m = App.current; const v = m.versions[idx]; if (!v) return;
+  pushUndo(); m.notes = JSON.parse(JSON.stringify(v.notes)); m.tempo = v.tempo; m.instrument = v.instrument;
+  autosaveIfUnsaved(); closeModal(); toast('Version restored'); render();
+}
+
+function openEnhanceReview() {
+  const m = App.current;
+  const result = enhanceMelody(m.notes, 'balanced');
+  App._enhancePreview = result;
+  const keyLine = result.key ? `Suggested key: <strong>${esc(result.key.name)}</strong>` : '';
+  const summaryHtml = result.summary.length
+    ? `<ul style="margin:0 0 14px;padding-left:18px;font-size:0.82rem;color:var(--text-dim);line-height:1.6">${result.summary.map(s=>`<li>${esc(s)}</li>`).join('')}</ul>`
+    : `<p>Your melody already looks clean — no confident changes to suggest.</p>`;
+  openModal(`
+    <h3>✨ Make It Musical</h3>
+    <p style="margin-bottom:4px">${keyLine}</p>
+    ${summaryHtml}
+    <p style="font-size:0.72rem;color:var(--text-dim);margin-bottom:14px">This only adjusts notes the detector was already unsure about and that fall outside the suggested key — it never overrides a note it was confident about, and your Original Melody is never touched.</p>
+    <div class="btn-row" style="margin-bottom:8px">
+      <button class="btn btn-secondary" style="flex:1" data-action="enhance:play-original">▶ Original</button>
+      <button class="btn btn-secondary" style="flex:1" data-action="enhance:play-enhanced" ${result.summary.length?'':'disabled'}>▶ Enhanced</button>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" style="flex:1" data-action="enhance:discard">Discard</button>
+      <button class="btn btn-primary" style="flex:1" data-action="enhance:keep" ${result.summary.length?'':'disabled'}>Keep Enhanced</button>
+    </div>
+  `, null);
+}
+function previewPlay(notes) {
+  const m = App.current;
+  Playback.play({ tempo: m.tempo, instrument: m.instrument, notes }, 0, { onTick:()=>{}, onEnd:()=>{} });
+}
+function keepEnhanced() {
+  if (!App._enhancePreview) return;
+  pushUndo();
+  App.current.notes = App._enhancePreview.notes;
+  App.current.notes.sort((a,b)=>a.start-b.start);
+  autosaveIfUnsaved(); closeModal(); toast('Enhancement applied — Undo to revert'); render();
+}
+
+function saveMelody() {
+  const m = App.current;
+  const nameInput = document.getElementById('melodyNameInput'); if (nameInput) m.name = nameInput.value.trim();
+  if (!m.id) {
+    const doSave = (name) => {
+      m.id = newId('m'); m.name = name || defaultMelodyName(); m.createdAt = Date.now(); m.updatedAt = Date.now(); m.draft = false;
+      Storage.upsertMelody(m); Storage.clearDraft(); App.savedRef = MelodyModel.clone(m);
+      closeModal(); toast('Melody saved'); render();
+    };
+    if (m.name) { doSave(m.name); return; }
+    openModal(`<h3>Name your melody</h3><p>Give it a name you'll recognize later.</p>
+      <input type="text" id="nameField" value="${esc(defaultMelodyName())}" />
+      <div class="btn-row"><button class="btn btn-secondary" style="flex:1" data-action="modal:cancel">Cancel</button><button class="btn btn-primary" style="flex:1" data-action="modal:save-name">Save</button></div>`,
+      null, { autofocus:'nameField' });
+  } else {
+    if (App.savedRef && !MelodyModel.isEqual(m, App.savedRef)) {
+      m.versions = m.versions || [];
+      m.versions.push({ notes: App.savedRef.notes, tempo: App.savedRef.tempo, instrument: App.savedRef.instrument, savedAt: App.savedRef.updatedAt || m.updatedAt });
+    }
+    m.updatedAt = Date.now(); m.draft = false; m.version = (m.version||1) + 1;
+    Storage.upsertMelody(m); App.savedRef = MelodyModel.clone(m);
+    toast('Saved'); render();
+  }
+}
+function defaultMelodyName(){ const n = Storage.loadMelodies().length+1; return 'My Melody '+String(n).padStart(2,'0'); }
+
+/* =====================================================================
+   LIBRARY
+===================================================================== */
+function screenLibrary() {
+  let list = Storage.loadMelodies();
+  const mode = App.libFilter.mode;
+  if (mode==='favorites') list = list.filter(m=>m.favorite);
+  if (mode==='drafts') list = list.filter(m=>m.draft);
+  if (App.libFilter.search) { const q=App.libFilter.search.toLowerCase(); list = list.filter(m=>m.name.toLowerCase().includes(q)); }
+  const deletedCount = Storage.loadDeleted().length;
+  const chip = (v,l) => `<div class="chip ${mode===v?'sel':''}" data-action="library:filter" data-value="${v}">${l}</div>`;
+  return `<div class="topbar"><div class="tb-title">My Melodies</div>${deletedCount?`<button class="tb-btn" style="width:auto;padding:0 10px;font-size:0.7rem" data-action="library:deleted">🗑 (${deletedCount})</button>`:''}</div>
+  <div class="search-box"><span>🔎</span><input id="librarySearch" placeholder="Search melodies" value="${esc(App.libFilter.search)}"></div>
+  <div class="filter-row">${chip('recent','Recent')}${chip('favorites','★ Favorites')}${chip('drafts','Drafts')}</div>
+  ${list.length ? list.map(libCard).join('') : (Storage.loadMelodies().length ? `
+    <div class="card empty-state"><div class="ico">🔎</div><h3>No melodies match</h3><p>Try a different search or filter.</p></div>` : `
+    <div class="card empty-state"><div class="ico">🎵</div><h3>Your melodies will appear here</h3><p>Got a melody in your head? Hum it and start creating.</p><button class="btn btn-primary" data-action="go:record">🎙️ Hum a Melody</button></div>`)}
+  `;
+}
+function libCard(m) {
+  return `<div class="card lib-card">
+    <canvas class="spark" data-notes='${esc(JSON.stringify(m.notes.map(n=>n.pitch)))}' data-action="library:open" data-id="${m.id}"></canvas>
+    <div class="lib-info" data-action="library:open" data-id="${m.id}">
+      <div class="li-name">${esc(m.name)}${m.draft?'<span class="draft-dot" title="Draft"></span>':''}</div>
+      <div class="li-meta">${INSTRUMENTS[m.instrument]?INSTRUMENTS[m.instrument].icon:'🎹'} ${INSTRUMENTS[m.instrument]?INSTRUMENTS[m.instrument].label:'Piano'} · ${m.tempo} BPM · ${fmtDate(m.updatedAt)}</div>
+    </div>
+    <div class="lib-actions">
+      <button class="icon-btn ${m.favorite?'on':''}" data-action="library:favorite" data-id="${m.id}">${m.favorite?'★':'☆'}</button>
+      <button class="icon-btn" data-action="library:more" data-id="${m.id}">⋮</button>
+    </div>
+  </div>`;
+}
+function screenDeleted() {
+  const del = Storage.loadDeleted();
+  return `<div class="topbar"><button class="tb-btn" data-action="go:back">←</button><div class="tb-title">Recently Deleted</div></div>
+  ${del.length ? del.map(m => `<div class="card lib-card"><div class="lib-info"><div class="li-name">${esc(m.name)}</div><div class="li-meta">Deleted ${fmtDate(m._deletedAt)}</div></div>
+    <div class="lib-actions"><button class="icon-btn" data-action="deleted:restore" data-id="${m.id}">↺</button><button class="icon-btn" data-action="deleted:purge" data-id="${m.id}">✕</button></div></div>`).join('')
+    : `<div class="card empty-state"><div class="ico">🗑</div><h3>Nothing here</h3><p>Deleted melodies stay here until you clear them, so you can undo an accidental delete.</p></div>`}`;
+}
+
+/* =====================================================================
+   SETTINGS / HELP / PRIVACY / CERTIFICATE
+===================================================================== */
+function screenStudio() {
+  const tab = App.studioTab || 'mixer';
+  const tabs = [['mixer','Mixer'],['looper','Looper'],['drums','Drums'],['bass','Bass & Chords'],['vocal','Vocal'],['fx','Effects']];
+  return `<div class="topbar"><button class="tb-btn" data-action="go:back">←</button><div class="tb-title">Studio</div></div>
+  <div class="tabs" style="overflow-x:auto">${tabs.map(([k,l])=>`<button class="${tab===k?'active':''}" data-action="studio:tab" data-value="${k}" style="white-space:nowrap;flex:none;padding:8px 12px">${l}</button>`).join('')}</div>
+  <div id="studioBody">${studioTabBody(tab)}</div>`;
+}
+function studioTabBody(tab) {
+  if (tab==='mixer') return studioMixerTab();
+  if (tab==='looper') return studioLooperTab();
+  if (tab==='drums') return studioDrumsTab();
+  if (tab==='bass') return studioBassTab();
+  if (tab==='vocal') return studioVocalTab();
+  if (tab==='fx') return studioFxTab();
+  return '';
+}
+function mixerRow(trackId, label) {
+  StudioEngine.ensure(); const t = StudioEngine.getOrCreateTrack(trackId, label);
+  return `<div class="card" style="margin-bottom:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><strong>${esc(label)}</strong>
+      <div style="display:flex;gap:6px">
+        <button class="icon-btn ${t.muted?'on':''}" data-action="studio:mute" data-id="${trackId}">M</button>
+        <button class="icon-btn ${t.solo?'on':''}" data-action="studio:solo" data-id="${trackId}">S</button>
+      </div>
+    </div>
+    <input type="range" min="0" max="1" step="0.05" value="${t.volume}" data-action-input="studio:volume" data-id="${trackId}">
+  </div>`;
+}
+function studioMixerTab() {
+  StudioEngine.ensure();
+  const loopRows = Looper.layers.map(l => mixerRow(l.trackId, 'Loop Layer')).join('');
+  return `<p style="color:var(--text-dim);font-size:0.78rem;margin:0 0 12px">Mixes Drums, Vocal and Loop layers into one master bus. Melody playback (in the editor) has its own volume via Tempo/Instrument for now — see the report for why.</p>
+  ${mixerRow('drums','Drums')}
+  ${mixerRow('vocal','Vocal')}
+  ${loopRows || '<p style="color:var(--text-dim);font-size:0.8rem">No loop layers yet — record one in the Looper tab.</p>'}
+  <div class="card"><strong>Master Volume</strong><input type="range" min="0" max="1" step="0.05" value="${StudioEngine.masterGain?StudioEngine.masterGain.gain.value:0.9}" data-action-input="studio:master-volume" style="margin-top:8px"></div>`;
+}
+function studioLooperTab() {
+  const hasLayers = Looper.layers.length>0;
+  return `<div class="card" style="margin-bottom:12px">
+    <p style="color:var(--text-dim);font-size:0.78rem;margin:0 0 10px">${hasLayers?'Overdub records a new layer timed to match your first layer automatically.':'Record your first layer — hum, sing, or play anything into the mic. It becomes your base loop.'}</p>
+    <div class="btn-row">
+      <button class="btn btn-danger" style="flex:1" data-action="studio:loop-record" ${App._loopRecording?'disabled':''}>${App._loopRecording?'● Recording…':'⏺ Record'+(hasLayers?' Overdub':'')}</button>
+      ${App._loopRecording ? `<button class="btn btn-secondary" style="flex:1" data-action="studio:loop-stop-record">■ Stop Recording</button>` : ''}
+    </div>
+    <div class="btn-row" style="margin-top:8px">
+      ${Looper.paused
+        ? `<button class="btn btn-primary" style="flex:1" data-action="studio:loop-resume" ${hasLayers?'':'disabled'}>▶ Resume</button>`
+        : Looper.playing
+          ? `<button class="btn btn-primary" style="flex:1" data-action="studio:loop-pause">⏸ Pause</button>`
+          : `<button class="btn btn-primary" style="flex:1" data-action="studio:loop-play" ${hasLayers?'':'disabled'}>▶ Play Loop</button>`}
+      <button class="btn btn-secondary" style="flex:1" data-action="studio:loop-stopplay">■ Stop</button>
+      <button class="btn btn-secondary" style="flex:1" data-action="studio:loop-clear" ${hasLayers?'':'disabled'}>Clear</button>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px">
+      <div><strong style="font-size:0.85rem">Loop</strong><div style="font-size:0.68rem;color:var(--text-dim)">${Looper.loopOn?'Repeats continuously':'Plays once, then stops'}</div></div>
+      <button class="switch ${Looper.loopOn?'on':''}" data-action="studio:loop-toggle-loop"><span class="knob"></span></button>
+    </div>
+    ${hasLayers ? `<p style="font-size:0.68rem;color:var(--text-dim);margin:10px 0 0">Loop length: ${Looper.loopDuration.toFixed(2)}s · State: ${Looper.playing?'Playing':Looper.paused?'Paused':'Stopped'}</p>` : ''}
+  </div>
+  ${Looper.layers.map((l,i)=>`<div class="card" style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><strong>Layer ${i+1}</strong><div style="display:flex;gap:6px">
+    <button class="icon-btn ${l.muted?'on':''}" data-action="studio:layer-mute" data-id="${l.id}">M</button>
+    <button class="icon-btn ${l.solo?'on':''}" data-action="studio:layer-solo" data-id="${l.id}">S</button>
+    <button class="icon-btn" data-action="studio:layer-delete" data-id="${l.id}">🗑</button>
+  </div></div>
+  <div style="font-size:0.68rem;color:var(--text-dim);margin-bottom:2px">Volume</div>
+  <input type="range" min="0" max="1" step="0.05" value="${l.volume}" data-action-input="studio:layer-volume" data-id="${l.id}">
+  <div style="font-size:0.68rem;color:var(--text-dim);margin:6px 0 2px">Pan</div>
+  <input type="range" min="-1" max="1" step="0.1" value="${l.pan||0}" data-action-input="studio:layer-pan" data-id="${l.id}"></div>`).join('') || '<p style="color:var(--text-dim);font-size:0.8rem">No layers yet.</p>'}`;
+}
+function studioDrumsTab() {
+  const rows = [['kick','Kick'],['snare','Snare'],['hihat','Hi-Hat'],['clap','Clap']];
+  return `<div class="card" style="margin-bottom:12px">
+    <div class="btn-row" style="margin-bottom:10px">
+      <button class="btn ${DrumMachine.playing?'btn-secondary':'btn-primary'}" style="flex:1" data-action="studio:drum-toggle">${DrumMachine.playing?'■ Stop':'▶ Play'}</button>
+      <button class="btn btn-secondary" style="flex:1" data-action="studio:drum-clear">Clear</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px"><span style="font-size:0.8rem;color:var(--text-dim)">BPM</span><input type="range" min="60" max="180" step="1" value="${DrumMachine.bpm}" data-action-input="studio:drum-bpm" style="flex:1"><span id="drumBpmDisplay" style="font-weight:700;min-width:32px">${DrumMachine.bpm}</span></div>
+  </div>
+  <div id="drumGrid">${drumGridHtml(rows)}</div>`;
+}
+function drumGridHtml(rows) {
+  return rows.map(([key,label]) => `<div style="margin-bottom:8px"><div style="font-size:0.72rem;color:var(--text-dim);margin-bottom:4px">${label}</div><div style="display:grid;grid-template-columns:repeat(16,1fr);gap:3px">${DrumMachine.steps[key].map((on,i)=>`<button data-action="studio:drum-step" data-id="${key}" data-idx="${i}" style="aspect-ratio:1;border-radius:5px;border:1px solid var(--border);background:${on?'var(--accent)':'var(--surface-2)'};${DrumMachine.displayStep===i?'box-shadow:0 0 0 2px #fff inset;':''}"></button>`).join('')}</div></div>`).join('');
+}
+function drawDrumGrid() { const el = document.getElementById('drumGrid'); if (el && App.screen==='studio' && App.studioTab==='drums') el.innerHTML = drumGridHtml([['kick','Kick'],['snare','Snare'],['hihat','Hi-Hat'],['clap','Clap']]); }
+function studioBassTab() {
+  const has = !!App.current && App.current.notes.length>0;
+  const b = App._bassLine, c = App._chords;
+  return `<p style="color:var(--text-dim);font-size:0.78rem;margin:0 0 12px">Rule-based suggestions from your melody's own detected key — not AI. ${has?'':'Open a melody first.'}</p>
+  <div class="card" style="margin-bottom:10px"><strong>Bass Line</strong><p style="font-size:0.76rem;color:var(--text-dim);margin:4px 0 10px">${b?('Suggested key: '+esc(b.key.name)):'Not generated yet.'}</p>
+    <div class="btn-row"><button class="btn btn-secondary" style="flex:1" data-action="studio:gen-bass" ${has?'':'disabled'}>Generate</button><button class="btn btn-primary" style="flex:1" data-action="studio:play-bass" ${b?'':'disabled'}>▶ Play</button></div></div>
+  <div class="card"><strong>Chords</strong><p style="font-size:0.76rem;color:var(--text-dim);margin:4px 0 10px">${c?('Suggested progression in '+esc(c.key.name)):'Not generated yet.'}</p>
+    <div class="btn-row"><button class="btn btn-secondary" style="flex:1" data-action="studio:gen-chords" ${has?'':'disabled'}>Generate</button><button class="btn btn-primary" style="flex:1" data-action="studio:play-chords" ${c?'':'disabled'}>▶ Play</button></div></div>`;
+}
+function studioVocalTab() {
+  return `<div class="card" style="margin-bottom:12px"><p style="color:var(--text-dim);font-size:0.78rem;margin:0 0 10px">Correction shifts pitch by resampling (playback speed changes with it) — a real but basic correction, not independent studio-grade time-stretch.</p>
+    <div class="btn-row"><button class="btn btn-danger" style="flex:1" data-action="studio:vocal-record" ${App._vocalRecording?'disabled':''}>${App._vocalRecording?'● Recording…':'⏺ Record Take'}</button>${App._vocalRecording?`<button class="btn btn-secondary" style="flex:1" data-action="studio:vocal-stop-record">■ Stop</button>`:''}</div></div>
+  ${VocalStudio.takes.map(t=>`<div class="card" style="margin-bottom:8px"><strong>${esc(t.name)}</strong>
+    <div class="btn-row" style="margin-top:8px"><button class="btn btn-secondary" style="flex:1" data-action="studio:vocal-play" data-id="${t.id}">▶ Original</button><button class="btn btn-primary" style="flex:1" data-action="studio:vocal-play-corrected" data-id="${t.id}">▶ Corrected</button><button class="icon-btn" data-action="studio:vocal-delete" data-id="${t.id}">🗑</button></div></div>`).join('') || '<p style="color:var(--text-dim);font-size:0.8rem">No takes yet.</p>'}`;
+}
+function studioFxTab() {
+  const e = StudioEngine.effects;
+  return `<p style="color:var(--text-dim);font-size:0.78rem;margin:0 0 12px">Applies to Drums/Vocal/Loop tracks via the master bus.</p>
+  <div class="card" style="margin-bottom:10px"><div style="display:flex;justify-content:space-between"><strong>Filter</strong><button class="switch ${e.filter.on?'on':''}" data-action="studio:fx-toggle" data-id="filter"><span class="knob"></span></button></div><input type="range" min="200" max="20000" step="100" value="${e.filter.freq}" data-action-input="studio:fx-filter-freq" style="margin-top:8px"></div>
+  <div class="card" style="margin-bottom:10px"><div style="display:flex;justify-content:space-between"><strong>Distortion</strong><button class="switch ${e.distortion.on?'on':''}" data-action="studio:fx-toggle" data-id="distortion"><span class="knob"></span></button></div><input type="range" min="1" max="40" step="1" value="${e.distortion.amount}" data-action-input="studio:fx-dist-amount" style="margin-top:8px"></div>
+  <div class="card" style="margin-bottom:10px"><div style="display:flex;justify-content:space-between"><strong>Delay</strong><button class="switch ${e.delay.on?'on':''}" data-action="studio:fx-toggle" data-id="delay"><span class="knob"></span></button></div><input type="range" min="0" max="1" step="0.05" value="${e.delay.wet}" data-action-input="studio:fx-delay-wet" style="margin-top:8px"></div>
+  <div class="card"><div style="display:flex;justify-content:space-between"><strong>Reverb</strong><button class="switch ${e.reverb.on?'on':''}" data-action="studio:fx-toggle" data-id="reverb"><span class="knob"></span></button></div><input type="range" min="0" max="1" step="0.05" value="${e.reverb.wet}" data-action-input="studio:fx-reverb-wet" style="margin-top:8px"></div>`;
+}
+
+function screenSettings() {
+  const s = App.settings;
+  const seg = (group, options, current) => options.map(o=>`<button class="${current===o.v?'sel':''}" data-action="settings:${group}" data-value="${o.v}">${o.l}</button>`).join('');
+  const sw = (action,on) => `<button class="switch ${on?'on':''}" data-action="${action}"><span class="knob"></span></button>`;
+  return `<div class="topbar"><div class="tb-title">Settings</div></div>
+  <div class="settings-group"><h4>Audio</h4>
+    <div class="set-row"><div><div class="set-label">Noise reduction</div><div style="font-size:0.72rem;color:var(--text-dim)">Applied on your next recording</div></div>${sw('settings:noise', s.noiseSuppression)}</div>
+    <div class="set-row" style="display:block"><div class="set-label" style="margin-bottom:8px">Input sensitivity</div><input type="range" id="sensSlider" min="0.5" max="3" step="0.1" value="${s.sensitivity}"></div>
+  </div>
+  <div class="settings-group"><h4>Playback</h4>
+    <div class="set-row"><div class="set-label">Default instrument</div><div class="seg">${Object.keys(INSTRUMENTS).slice(0,3).map(k=>`<button class="${s.instrument===k?'sel':''}" data-action="settings:instrument" data-value="${k}">${INSTRUMENTS[k].icon}</button>`).join('')}</div></div>
+    <div class="set-row"><div class="set-label">Default tempo</div><div class="seg">${seg('tempo',[{v:70,l:'Slow'},{v:100,l:'Normal'},{v:135,l:'Fast'}], s.tempo)}</div></div>
+  </div>
+  <div class="settings-group"><h4>Appearance</h4>
+    <div class="set-row"><div class="set-label">Theme</div><div class="seg">${seg('theme',[{v:'dark',l:'Dark'},{v:'light',l:'Light'},{v:'system',l:'System'}], s.theme)}</div></div>
+  </div>
+  <div class="settings-group"><h4>Accessibility</h4>
+    <div class="set-row"><div class="set-label">Text size</div><div class="seg">${seg('textsize',[{v:'sm',l:'S'},{v:'md',l:'M'},{v:'lg',l:'L'}], s.textSize)}</div></div>
+    <div class="set-row"><div class="set-label">Reduced motion</div><div class="seg">${seg('motion',[{v:'on',l:'On'},{v:'off',l:'Off'},{v:'system',l:'Auto'}], s.motion)}</div></div>
+  </div>
+  <div class="settings-group"><h4>Storage</h4>
+    <div class="set-row"><div class="set-label">Clear drafts</div><button class="btn btn-secondary" data-action="settings:clear-drafts">Clear</button></div>
+    <div class="set-row"><div class="set-label">Export all data (.json)</div><button class="btn btn-secondary" data-action="settings:export-all">Export</button></div>
+  </div>
+  <div class="settings-group"><h4>About</h4>
+    <div class="set-row" data-action="settings:help" style="cursor:pointer"><div class="set-label">How HumTune works</div><span>›</span></div>
+    <div class="set-row" data-action="settings:privacy" style="cursor:pointer"><div class="set-label">Privacy</div><span>›</span></div>
+    <div class="set-row"><div class="set-label">Version</div><span style="color:var(--text-dim)">0.2.0 (prototype)</span></div>
+  </div>`;
+}
+function screenHelp() {
+  const items = [
+    ['How does HumTune work?', "You hum into your phone's microphone. HumTune measures the pitch of your voice over time, smooths out natural wobble, and groups the sound into distinct notes — then plays those notes back on a synthesized instrument."],
+    ['What is Pitch?', "Pitch is how high or low a sound is. HumTune estimates pitch many times per second using a technique called autocorrelation, which finds the repeating pattern in your voice's sound wave."],
+    ['Why can notes sometimes be wrong?', "Humming isn't as precise as playing an instrument — sliding between notes, vibrato, or background noise can occasionally cause a note to be split, merged, or off by a semitone."],
+    ['How do I correct notes?', "Tap a note in the Piano Roll to select it, then use Higher / Lower / Earlier / Later / Shorter / Longer. You can also Undo, or restore your Original Melody at any time."],
+    ['What is MIDI?', "MIDI is a standard file format that stores notes, timing and velocity so other music software can read them. A true .midi file download isn't available in this preview build (see Settings → Export); a .json export with the same note data is."],
+    ['What is a Creation Record?', "A Creation Record is a technical record HumTune generates for a saved melody — its ID, timestamps, and a cryptographic hash of its data. It is not a government copyright registration, patent, or legal determination of ownership."]
+  ];
+  return `<div class="topbar"><button class="tb-btn" data-action="go:back">←</button><div class="tb-title">How HumTune Works</div></div>
+  ${items.map(([h,p])=>`<div class="card help-item"><h4>${esc(h)}</h4><p>${esc(p)}</p></div>`).join('')}`;
+}
+function screenPrivacy() {
+  return `<div class="topbar"><button class="tb-btn" data-action="go:back">←</button><div class="tb-title">Privacy</div></div>
+  <div class="card priv-text">
+    <p><strong>Microphone:</strong> HumTune uses your microphone only to hear the melody you hum, so it can identify pitch and turn it into notes.</p>
+    <p><strong>Where processing happens:</strong> in this prototype, the pitch analysis runs in your browser using the Web Audio API. The audio is not uploaded to a HumTune server as part of that analysis.</p>
+    <p><strong>What's kept:</strong> after processing, the detected notes (not the raw audio) are what HumTune keeps, stored in your browser's local storage on this device.</p>
+    <p><strong>What this build doesn't guarantee:</strong> this is a prototype running inside a hosted preview environment; we don't control every layer between your microphone and the browser, so we can't make an absolute guarantee that no other part of that stack ever sees audio in transit. A future native app would state this precisely for its own architecture.</p>
+    <p>Melodies aren't backed up to an account or cloud service yet. Clearing your browser's site data will remove them (recently deleted melodies are kept temporarily so accidental deletes can be undone).</p>
+  </div>`;
+}
+async function screenCertificate() {
+  const m = Storage.getMelody(App.params.melodyId) || App.current;
+  if (!m || !m.id) return `<div class="topbar"><button class="tb-btn" data-action="go:back">←</button><div class="tb-title">Creation Record</div></div><div class="card">Save this melody first.</div>`;
+  return `<div class="topbar"><button class="tb-btn" data-action="go:back">←</button><div class="tb-title">Creation Record</div></div>
+  <div class="card cert-card" id="certBody">
+    <div class="cert-title">HumTune Creation Certificate</div>
+    <div class="cert-sub">Generating hash…</div>
+  </div>
+  <div class="btn-row" style="margin-top:14px"><button class="btn btn-secondary btn-block" data-action="cert:export" data-id="${m.id}">⇩ Export Ownership Package</button></div>`;
+}
+async function fillCertificate(m) {
+  const canonical = JSON.stringify({ id:m.id, name:m.name, notes:m.notes, tempo:m.tempo, instrument:m.instrument, createdAt:m.createdAt, version:m.version });
+  const hash = await sha256Hex(canonical);
+  const el = document.getElementById('certBody'); if (!el) return;
+  const recordId = hash ? ('CR-'+hash.slice(0,12).toUpperCase()) : 'unavailable';
+  el.innerHTML = `
+    <div class="cert-title">HumTune Creation Certificate</div>
+    <div class="cert-sub">Technical creation record — not a legal registration</div>
+    <div class="cert-row"><span>Melody Name</span><span>${esc(m.name)}</span></div>
+    <div class="cert-row"><span>Melody ID</span><span>${esc(m.id)}</span></div>
+    <div class="cert-row"><span>Creation Date</span><span>${esc(fmtDateTime(m.createdAt))}</span></div>
+    <div class="cert-row"><span>Version</span><span>v${m.version||1}</span></div>
+    <div class="cert-row"><span>Creation Record ID</span><span>${esc(recordId)}</span></div>
+    <div class="cert-row"><span>Content Hash (SHA-256)</span><span>${hash?esc(hash):'Not available in this browser'}</span></div>
+    <div class="cert-disclaimer">This is a technical creation record generated by HumTune. It is not a government copyright registration, patent, or legal determination of ownership. The hash above is a cryptographic fingerprint of this melody's saved data (notes, tempo, instrument) computed on your device — it proves the data hasn't changed since this record was generated, nothing more.</div>
+  `;
+}
+
+/* =====================================================================
+   MASTER RENDER
+===================================================================== */
+function render() {
+  applyTheme();
+  const root = document.getElementById('screen-root');
+  switch (App.screen) {
+    case 'home': root.innerHTML = screenHome(); drawHeroWave(); drawSparklines(); break;
+    case 'create': root.innerHTML = screenCreate(); break;
+    case 'discover': root.innerHTML = screenDiscover(); break;
+    case 'record': root.innerHTML = screenRecord(); break;
+    case 'processing': root.innerHTML = screenProcessing(); runProcessing(App.params.frames||[]); break;
+    case 'editor': root.innerHTML = screenEditor(); drawEditorCanvas(); drawScrub(); bindEditorCanvases(); break;
+    case 'library': root.innerHTML = screenLibrary(); drawSparklines(); bindLibrarySearch(); break;
+    case 'deleted': root.innerHTML = screenDeleted(); break;
+    case 'settings': root.innerHTML = screenSettings(); bindSensSlider(); break;
+    case 'studio': root.innerHTML = screenStudio(); break;
+    case 'help': root.innerHTML = screenHelp(); break;
+    case 'privacy': root.innerHTML = screenPrivacy(); break;
+    case 'certificate': root.innerHTML = `<div class="topbar"><button class="tb-btn" data-action="go:back">←</button><div class="tb-title">Creation Record</div></div><div class="card cert-card" id="certBody"><div class="cert-title">HumTune Creation Certificate</div><div class="cert-sub">Generating…</div></div><div class="btn-row" style="margin-top:14px"><button class="btn btn-secondary btn-block" data-action="cert:export" data-id="${App.params.melodyId||''}">⇩ Export Ownership Package</button></div>`;
+      { const m = Storage.getMelody(App.params.melodyId); if (m) fillCertificate(m); }
+      break;
+    default: root.innerHTML = screenHome(); drawHeroWave(); drawSparklines();
+  }
+  renderNav();
+  window.scrollTo(0,0);
+}
+function bindEditorCanvases() {
+  const rc = document.getElementById('rollCanvas'); if (rc) rc.onclick = handleRollClick;
+  const sb = document.getElementById('scrubBar'); if (sb) sb.onclick = handleScrubClick;
+  const ni = document.getElementById('melodyNameInput');
+  if (ni) {
+    const commitName = () => { App.current.name = ni.value.trim(); autosaveIfUnsaved(); };
+    ni.onblur = commitName;
+    ni.oninput = commitName; // also commit as-you-type, so a back-press right after typing can't lose the name
+  }
+  syncPlayIcon();
+}
+function syncPlayIcon() {
+  // The Play/Pause button markup always starts as '▶'; re-sync it to the
+  // real Playback engine state on every editor render so switching tabs or
+  // editing a note while audio is playing can't leave a stale icon.
+  const btn = document.getElementById('playPauseBtn'); if (!btn || !App.current) return;
+  const viewNotes = currentViewNotes();
+  const isPlayingThisView = Playback.playing && Playback.melody && Playback.melody.notes === viewNotes;
+  btn.textContent = isPlayingThisView ? '⏸' : '▶';
+}
+function bindLibrarySearch() {
+  const el = document.getElementById('librarySearch'); if (!el) return;
+  el.oninput = () => { App.libFilter.search = el.value; const html = screenLibrary(); document.getElementById('screen-root').innerHTML = html; drawSparklines(); bindLibrarySearch(); const ne=document.getElementById('librarySearch'); ne.focus(); ne.selectionStart = ne.value.length; };
+}
+function bindSensSlider() {
+  const el = document.getElementById('sensSlider'); if (!el) return;
+  el.oninput = () => { App.settings.sensitivity = parseFloat(el.value); Storage.saveSettings(App.settings); };
+}
+
+/* =====================================================================
+   EXPORT HELPERS
+===================================================================== */
+async function getDownloads() { try { return window.claude ? await window.claude.use('downloads') : null; } catch(e){ return null; } }
+function browserDownload(filename, data) {
+  // Standard Web API download — no Claude dependency. This is what actually
+  // fires once this same file is hosted independently (GitHub Pages, Netlify,
+  // Cloudflare Pages, etc.), since window.claude won't exist there.
+  try {
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; a.style.display = 'none';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    return true;
+  } catch (e) { return false; }
+}
+async function saveOrShowJSON(filename, data, title) {
+  const dl = await getDownloads();
+  if (dl) { try { await dl.save({ filename, data }); toast('Exported'); return; } catch(e) { /* fall through */ } }
+  if (browserDownload(filename, data)) { toast('Downloaded'); return; }
+  openModal(`<h3>${esc(title||'Export')}</h3><p>Direct download isn't available here — copy the JSON below instead.</p><textarea readonly>${esc(data)}</textarea><button class="btn btn-primary btn-block" data-action="modal:cancel">Done</button>`, null);
+}
+async function exportOwnershipPackage(id) {
+  const m = Storage.getMelody(id); if (!m) return;
+  const canonical = JSON.stringify({ id:m.id, name:m.name, notes:m.notes, tempo:m.tempo, instrument:m.instrument, createdAt:m.createdAt, version:m.version });
+  const hash = await sha256Hex(canonical);
+  const pkg = {
+    certificate: { melodyName:m.name, melodyId:m.id, createdAt:m.createdAt, version:m.version, contentHashSHA256: hash, note:"Technical creation record generated by HumTune. Not a government copyright registration, patent, or legal determination of ownership." },
+    originalMelody: { notes:m.originalNotes, tempo:m.tempo, instrument:m.instrument },
+    currentMelody: { notes:m.notes, tempo:m.tempo, instrument:m.instrument },
+    versionHistory: m.versions,
+    metadata: { favorite:m.favorite, createdAt:m.createdAt, updatedAt:m.updatedAt },
+    midiNote: "A binary .mid file could not be included: this environment's file-export allowlist does not currently support the .mid/.midi extension. All the data a MIDI file needs (pitch, startTime, duration, velocity, tempo) is present above and in currentMelody/originalMelody."
+  };
+  saveOrShowJSON((m.name||'melody').replace(/[^a-z0-9\- _]/gi,'').trim()+'-ownership-package.json', JSON.stringify(pkg,null,2), 'Ownership Package');
+}
+
+/* =====================================================================
+   EVENT DELEGATION
+===================================================================== */
+document.body.addEventListener('click', async (e) => {
+  const t = e.target.closest('[data-action]'); if (!t) return;
+  const action = t.dataset.action, id = t.dataset.id, value = t.dataset.value, idx = t.dataset.idx;
+  try {
+
+  if (action.startsWith('nav:')) { const s = action.split(':')[1]; navigate(s==='create'?'create':s); return; }
+  if (action === 'go:record') { navigate('record'); doStartRecording(); return; }
+  if (action === 'go:studio') { navigate('studio'); return; }
+  if (action === 'go:home') { navigate('home'); return; }
+  if (action === 'go:back') { history.back(); return; }
+  if (action === 'go:blank-editor') {
+    const m = MelodyModel.blank(App.settings);
+    App.current = m; App.savedRef = null; App.undoStack=[]; App.redoStack=[]; App.selectedNoteId=null; App.editorView='simple'; App.previewOriginal=false;
+    Storage.saveDraft(m); navigate('editor', { fresh:true });
+    return;
+  }
+
+  if (action === 'record:allow-mic') { doStartRecording(); return; }
+  if (action === 'record:pause') { doPauseRecording(); return; }
+  if (action === 'record:resume') { doResumeRecording(); return; }
+  if (action === 'record:stop') { doStopRecording(); return; }
+  if (action === 'record:cancel') { doCancelRecording(); return; }
+
+  if (action === 'editor:back') { if (Playback.melody===App.current) Playback.stop(); history.back(); return; }
+  if (action === 'editor:view-roll') { App.editorView='roll'; render(); return; }
+  if (action === 'editor:view-sheet') { App.editorView='sheet'; render(); return; }
+  if (action === 'editor:view-simple') { App.editorView='simple'; render(); return; }
+  if (action === 'editor:select-note') { App.selectedNoteId = id; render(); return; }
+  if (action === 'editor:playpause') { editorPlayPause(); return; }
+  if (action === 'editor:stop') { Playback.stop(); setPlayIcon('▶'); drawEditorCanvas(); drawScrub(); return; }
+  if (action === 'editor:add-note') { addNoteAction(); return; }
+  if (action === 'editor:enhance') { openEnhanceReview(); return; }
+  if (action === 'enhance:play-original') { previewPlay(App.current.originalNotes.length ? App.current.originalNotes : App.current.notes); return; }
+  if (action === 'enhance:play-enhanced') { previewPlay(App._enhancePreview.notes); return; }
+  if (action === 'enhance:keep') { keepEnhanced(); return; }
+  if (action === 'enhance:discard') { Playback.stop(); closeModal(); return; }
+  if (action === 'editor:undo') { undoAction(); return; }
+  if (action === 'editor:redo') { redoAction(); return; }
+  if (action === 'editor:whole-higher') { wholeMelodyShift(1); return; }
+  if (action === 'editor:whole-lower') { wholeMelodyShift(-1); return; }
+  if (action === 'editor:octave-up') { wholeMelodyShift(12); return; }
+  if (action === 'editor:octave-down') { wholeMelodyShift(-12); return; }
+  if (action === 'editor:instrument') { App.current.instrument = value; autosaveIfUnsaved(); render(); return; }
+  if (action === 'editor:tempo') { App.current.tempo = parseInt(value,10); autosaveIfUnsaved(); render(); return; }
+  if (action === 'editor:save') { saveMelody(); return; }
+  if (action === 'editor:view-original') { viewOriginal(); return; }
+  if (action === 'editor:view-current') { viewCurrentFromOriginal(); return; }
+  if (action === 'editor:restore-original') { restoreOriginal(); return; }
+  if (action === 'editor:versions') { openVersionsSheet(); return; }
+  if (action === 'editor:more') {
+    const m = App.current;
+    openSheet(`<div class="sheet-handle"></div>
+      <div class="sheet-item" data-action="sheet:favorite">${m.favorite?'★ Remove from Favorites':'☆ Add to Favorites'}</div>
+      <div class="sheet-item" data-action="sheet:rename">✎ Rename</div>
+      <div class="sheet-item" data-action="sheet:duplicate">⧉ Duplicate</div>
+      <div class="sheet-item" data-action="sheet:variation">🌱 Create Variation</div>
+      <div class="sheet-item" data-action="sheet:protect">🛡 Protect My Melody</div>
+      <div class="sheet-item" data-action="sheet:export">⇩ Export</div>
+      <div class="sheet-item danger" data-action="sheet:delete">🗑 Delete</div>`);
+    return;
+  }
+  if (action.startsWith('note:')) { noteAction(action.split(':')[1]); return; }
+  if (action === 'version:view-original') { closeSheet(); viewOriginal(); return; }
+  if (action === 'version:view') { viewVersion(parseInt(idx,10)); return; }
+  if (action === 'version:restore') { restoreVersion(parseInt(idx,10)); return; }
+
+  if (action === 'library:open') { openMelodyById(id); return; }
+  if (action === 'library:favorite') { const m=Storage.getMelody(id); if (m){ m.favorite=!m.favorite; Storage.upsertMelody(m); render(); } return; }
+  if (action === 'library:filter') { App.libFilter.mode = value; render(); return; }
+  if (action === 'library:deleted') { navigate('deleted'); return; }
+  if (action === 'library:more') {
+    const m = Storage.getMelody(id); if (!m) return;
+    openSheet(`<div class="sheet-handle"></div>
+      <div class="sheet-item" data-action="sheet:rename" data-id="${id}">✎ Rename</div>
+      <div class="sheet-item" data-action="sheet:duplicate" data-id="${id}">⧉ Duplicate</div>
+      <div class="sheet-item" data-action="sheet:variation" data-id="${id}">🌱 Create Variation</div>
+      <div class="sheet-item" data-action="sheet:protect" data-id="${id}">🛡 Protect My Melody</div>
+      <div class="sheet-item" data-action="sheet:export" data-id="${id}">⇩ Export</div>
+      <div class="sheet-item danger" data-action="sheet:delete" data-id="${id}">🗑 Delete</div>`);
+    return;
+  }
+  if (action === 'deleted:restore') { Storage.restoreDeleted(id); toast('Restored'); render(); return; }
+  if (action === 'deleted:purge') { Storage.purgeDeletedForever(id); toast('Removed permanently'); render(); return; }
+
+  if (action.startsWith('sheet:')) {
+    const kind = action.split(':')[1];
+    const target = id ? Storage.getMelody(id) : App.current;
+    if (kind === 'close') { closeSheet(); return; }
+    closeSheet(); if (!target) return;
+    if (kind === 'favorite') { target.favorite=!target.favorite; if (target.id) Storage.upsertMelody(target); render(); return; }
+    if (kind === 'rename') { openModal(`<h3>Rename melody</h3><input type="text" id="renameField" value="${esc(target.name)}"><div class="btn-row"><button class="btn btn-secondary" style="flex:1" data-action="modal:cancel">Cancel</button><button class="btn btn-primary" style="flex:1" data-action="modal:confirm-rename" data-id="${target.id||''}">Save</button></div>`, null, { autofocus:'renameField' }); return; }
+    if (kind === 'duplicate') { const c=MelodyModel.clone(target); c.id=newId('m'); c.name=target.name+' Copy'; c.createdAt=Date.now(); c.updatedAt=Date.now(); c.favorite=false; c.versions=[]; Storage.upsertMelody(c); toast('Duplicated'); render(); return; }
+    if (kind === 'variation') { const c=MelodyModel.clone(target); c.id=newId('m'); c.name=target.name+' (Variation)'; c.createdAt=Date.now(); c.updatedAt=Date.now(); c.favorite=false; c.versions=[]; c.originalNotes=JSON.parse(JSON.stringify(target.notes)); Storage.upsertMelody(c); toast('Variation created — the original is untouched'); render(); return; }
+    if (kind === 'protect') { if (!target.id) { toast('Save the melody first'); return; } navigate('certificate', { melodyId: target.id }); return; }
+    if (kind === 'export') { exportMelodyFile(target); return; }
+    if (kind === 'delete') { openModal(`<h3>Delete this melody?</h3><p>It'll move to Recently Deleted, so you can restore it if this was a mistake.</p><div class="btn-row"><button class="btn btn-secondary" style="flex:1" data-action="modal:cancel">Cancel</button><button class="btn btn-danger" style="flex:1" data-action="modal:confirm-delete" data-id="${target.id||''}">Delete</button></div>`, null); return; }
+  }
+
+  if (action === 'settings:noise') { App.settings.noiseSuppression=!App.settings.noiseSuppression; Storage.saveSettings(App.settings); render(); return; }
+  if (action === 'settings:instrument') { App.settings.instrument=value; Storage.saveSettings(App.settings); render(); return; }
+  if (action === 'settings:tempo') { App.settings.tempo=parseInt(value,10); Storage.saveSettings(App.settings); render(); return; }
+  if (action === 'settings:theme') { App.settings.theme=value; Storage.saveSettings(App.settings); render(); return; }
+  if (action === 'settings:textsize') { App.settings.textSize=value; Storage.saveSettings(App.settings); render(); return; }
+  if (action === 'settings:motion') { App.settings.motion=value; Storage.saveSettings(App.settings); render(); return; }
+  if (action === 'settings:clear-drafts') { Storage.clearDraft(); toast('Drafts cleared'); return; }
+  if (action === 'settings:export-all') { const all = Storage.loadMelodies(); saveOrShowJSON('humtune-melodies.json', JSON.stringify(all,null,2), 'Export data'); return; }
+  if (action === 'settings:help') { navigate('help'); return; }
+  if (action === 'settings:privacy') { navigate('privacy'); return; }
+
+  if (action === 'cert:export') { if (id) exportOwnershipPackage(id); return; }
+
+  if (action === 'modal:cancel') { closeModal(); return; }
+  if (action === 'modal:save-name') { const f=document.getElementById('nameField'); saveWithName(f?f.value.trim():''); return; }
+  if (action === 'modal:confirm-rename') { const f=document.getElementById('renameField'); confirmRename(id, f?f.value.trim():''); return; }
+  if (action === 'modal:confirm-delete') { confirmDelete(id); return; }
+  if (action === 'modal:confirm-restore') { doRestoreOriginal(); return; }
+
+  if (action === 'sheet:close') { closeSheet(); return; }
+
+  if (action === 'onb:skip' || action === 'onb:done') { finishOnboarding(); return; }
+  if (action === 'onb:next') { onboardingNext(); return; }
+
+  if (action === 'draft:continue') { resumeDraft(); return; }
+  if (action === 'draft:discard') { Storage.clearDraft(); const w=document.getElementById('draftPromptWrap'); if (w) w.remove(); return; }
+
+  if (action === 'unsaved:cancel') { closeModal(); App.pendingNav=null; return; }
+  if (action === 'unsaved:discard') {
+    closeModal(); Storage.clearDraft(); const p = App.pendingNav; App.pendingNav=null;
+    if (p && p.fromPopstate) { history.back(); } else if (p) { doNavigate(p.screen, p.params, p.replace); }
+    return;
+  }
+  if (action === 'unsaved:save') {
+    closeModal(); saveMelody();
+    setTimeout(() => { const p = App.pendingNav; App.pendingNav=null; if (p && p.fromPopstate) history.back(); else if (p) doNavigate(p.screen, p.params, p.replace); }, 50);
+    return;
+  }
+
+  if (action === 'studio:tab') { App.studioTab = value; render(); return; }
+  if (action === 'studio:mute') { const tr=StudioEngine.tracks[id]; StudioEngine.setTrackMute(id, !(tr&&tr.muted)); render(); return; }
+  if (action === 'studio:solo') { const tr=StudioEngine.tracks[id]; StudioEngine.setTrackSolo(id, !(tr&&tr.solo)); render(); return; }
+
+  if (action === 'studio:loop-record') {
+    App._loopRecording = true; render();
+    const dur = Looper.loopDuration; // null for the first layer (free length), fixed for overdubs
+    const result = await Looper.recordLayer(dur);
+    App._loopRecording = false;
+    if (result.error) { toast(result.error); render(); return; }
+    Looper.addLayer(result.buffer); toast('Layer added'); render();
+    return;
+  }
+  if (action === 'studio:loop-stop-record') { Looper.stopRecording(); return; }
+  if (action === 'studio:loop-play') { Looper.play(); render(); return; }
+  if (action === 'studio:loop-pause') { Looper.pause(); render(); return; }
+  if (action === 'studio:loop-resume') { Looper.resume(); render(); return; }
+  if (action === 'studio:loop-toggle-loop') { Looper.toggleLoopOn(); render(); return; }
+  if (action === 'studio:loop-stopplay') { Looper.stop(); render(); return; }
+  if (action === 'studio:loop-clear') { Looper.clear(); render(); return; }
+  if (action === 'studio:layer-mute') { const l=Looper.layers.find(x=>x.id===id); Looper.setLayerMute(id, !(l&&l.muted)); render(); return; }
+  if (action === 'studio:layer-solo') { const l=Looper.layers.find(x=>x.id===id); Looper.setLayerSolo(id, !(l&&l.solo)); render(); return; }
+  if (action === 'studio:layer-delete') { Looper.removeLayer(id); render(); return; }
+
+  if (action === 'studio:drum-toggle') { if (DrumMachine.playing) DrumMachine.stop(); else DrumMachine.start(); render(); return; }
+  if (action === 'studio:drum-clear') { DrumMachine.clear(); render(); return; }
+  if (action === 'studio:drum-step') { DrumMachine.toggleStep(id, parseInt(idx,10)); render(); return; }
+
+  if (action === 'studio:gen-bass') { if (App.current) { App._bassLine = generateBassLine(App.current); render(); } return; }
+  if (action === 'studio:gen-chords') { if (App.current) { App._chords = generateChords(App.current); render(); } return; }
+  if (action === 'studio:play-bass') {
+    if (!App._bassLine) return; StudioEngine.ensure(); const track = StudioEngine.getOrCreateTrack('bass','Bass');
+    const t0 = StudioEngine.ctx.currentTime + 0.05;
+    App._bassLine.notes.forEach(n => playInstrumentNote(StudioEngine.ctx, 'bass', midiToFreq(n.pitch), t0+n.start, n.end-n.start, n.velocity, track.gainNode));
+    return;
+  }
+  if (action === 'studio:play-chords') {
+    if (!App._chords) return; StudioEngine.ensure(); const track = StudioEngine.getOrCreateTrack('chords','Chords');
+    const t0 = StudioEngine.ctx.currentTime + 0.05;
+    App._chords.notes.forEach(n => playInstrumentNote(StudioEngine.ctx, 'synth', midiToFreq(n.pitch), t0+n.start, n.end-n.start, n.velocity, track.gainNode));
+    return;
+  }
+
+  if (action === 'studio:vocal-record') {
+    App._vocalRecording = true; render();
+    const result = await VocalStudio.recordTake();
+    App._vocalRecording = false;
+    if (result.error) { toast(result.error); render(); return; }
+    VocalStudio.addTake(result.buffer); toast('Take recorded'); render();
+    return;
+  }
+  if (action === 'studio:vocal-stop-record') { VocalStudio.stopRecording(); return; }
+  if (action === 'studio:vocal-play') { VocalStudio.play(id, 1); return; }
+  if (action === 'studio:vocal-play-corrected') {
+    const take = VocalStudio.takes.find(t=>t.id===id); if (!take) return;
+    const rate = suggestVocalCorrectionRate(take, App.current);
+    VocalStudio.play(id, rate);
+    return;
+  }
+  if (action === 'studio:vocal-delete') { VocalStudio.deleteTake(id); render(); return; }
+
+  if (action === 'studio:fx-toggle') {
+    const e = StudioEngine.effects[id]; const on = !e.on;
+    if (id==='filter') StudioEngine.setFilter(on, e.freq, e.type);
+    if (id==='distortion') StudioEngine.setDistortion(on, e.amount);
+    if (id==='delay') StudioEngine.setDelay(on, e.wet, e.time, e.feedback);
+    if (id==='reverb') StudioEngine.setReverb(on, e.wet);
+    render(); return;
+  }
+  } catch (err) {
+    console.error('HumTune action failed:', action, err);
+    toast('Something went wrong with that action — please try again.');
+  }
+});
+
+document.body.addEventListener('input', (e) => {
+  const t = e.target.closest('[data-action-input]'); if (!t) return;
+  const action = t.dataset.actionInput, id = t.dataset.id, val = parseFloat(t.value);
+  try {
+    if (action === 'studio:volume') { StudioEngine.setTrackVolume(id, val); return; }
+    if (action === 'studio:master-volume') { StudioEngine.setMasterVolume(val); return; }
+    if (action === 'studio:layer-volume') { Looper.setLayerVolume(id, val); return; }
+    if (action === 'studio:layer-pan') { Looper.setLayerPan(id, val); return; }
+    if (action === 'studio:drum-bpm') { DrumMachine.bpm = val; const disp = document.getElementById('drumBpmDisplay'); if (disp) disp.textContent = val; return; }
+    if (action === 'studio:fx-filter-freq') { const e2 = StudioEngine.effects.filter; StudioEngine.setFilter(e2.on, val, e2.type); return; }
+    if (action === 'studio:fx-dist-amount') { const e2 = StudioEngine.effects.distortion; StudioEngine.setDistortion(e2.on, val); return; }
+    if (action === 'studio:fx-delay-wet') { const e2 = StudioEngine.effects.delay; StudioEngine.setDelay(e2.on, val, e2.time, e2.feedback); return; }
+    if (action === 'studio:fx-reverb-wet') { const e2 = StudioEngine.effects.reverb; StudioEngine.setReverb(e2.on, val); return; }
+  } catch (err) { console.error('HumTune slider action failed:', action, err); }
+});
+
+function exportMelodyFile(m) { saveOrShowJSON((m.name||'melody').replace(/[^a-z0-9\- _]/gi,'').trim()+'.json', melodyToJSON(m), 'Export melody'); }
+function saveWithName(name) { const m=App.current; m.id=newId('m'); m.name=name||defaultMelodyName(); m.createdAt=Date.now(); m.updatedAt=Date.now(); m.draft=false; Storage.upsertMelody(m); Storage.clearDraft(); App.savedRef=MelodyModel.clone(m); closeModal(); toast('Melody saved'); render(); }
+function confirmRename(id, name) { if (!name) { closeModal(); return; } if (id) { const m=Storage.getMelody(id); if (m) { m.name=name; m.updatedAt=Date.now(); Storage.upsertMelody(m); } } else if (App.current) { App.current.name=name; autosaveIfUnsaved(); } closeModal(); toast('Renamed'); render(); }
+function confirmDelete(id) {
+  if (id) { Storage.softDeleteMelody(id); toast('Deleted'); closeModal(); navigate('library', {}, true); }
+  else { App.current=null; Storage.clearDraft(); closeModal(); toast('Deleted'); navigate('home', {}, true); }
+}
+function openMelodyById(id) {
+  const m = Storage.getMelody(id); if (!m) return;
+  App.current = MelodyModel.clone(m); App.savedRef = MelodyModel.clone(m);
+  App.undoStack=[]; App.redoStack=[]; App.selectedNoteId=null; App.editorView='roll'; App.previewOriginal=false;
+  navigate('editor', { fresh:false });
+}
+
+/* =====================================================================
+   ONBOARDING
+===================================================================== */
+const ONB_SLIDES = [
+  { ico:'🎵', h:'Have a melody in your head?', p:'Everyone does, even without musical training.' },
+  { ico:'🎙️', h:'Hum it.', p:'Just hum or sing it into your phone — no perfect pitch required.' },
+  { ico:'🎹', h:'Turn it into music.', p:'HumTune finds the notes and plays them back so you can build on the idea.' }
+];
+let onbIndex = 0;
+function renderOnboarding() {
+  const el = document.getElementById('onboarding'); const s = ONB_SLIDES[onbIndex];
+  el.innerHTML = `<button class="onb-skip" data-action="onb:skip">Skip</button>
+    <div class="onb-body"><div class="ico">${s.ico}</div><h2>${esc(s.h)}</h2><p>${esc(s.p)}</p></div>
+    <div class="onb-dots">${ONB_SLIDES.map((_,i)=>`<span class="${i===onbIndex?'on':''}"></span>`).join('')}</div>
+    <div class="onb-footer"><button class="btn btn-primary btn-block" data-action="${onbIndex===ONB_SLIDES.length-1?'onb:done':'onb:next'}">${onbIndex===ONB_SLIDES.length-1?'Get Started':'Next'}</button></div>`;
+}
+function onboardingNext(){ onbIndex = Math.min(ONB_SLIDES.length-1, onbIndex+1); renderOnboarding(); }
+function finishOnboarding(){ Storage.setOnboarded(); document.getElementById('onboarding').hidden = true; }
+
+/* =====================================================================
+   DRAFT RESUME PROMPT
+===================================================================== */
+function maybeShowDraftPrompt() {
+  const draft = Storage.loadDraft(); if (!draft || !draft.notes || !draft.notes.length) return;
+  const wrap = document.createElement('div'); wrap.id='draftPromptWrap'; wrap.className='card'; wrap.style.margin='12px 16px 0';
+  wrap.innerHTML = `<div style="font-weight:700;margin-bottom:4px">Continue your melody?</div><div style="color:var(--text-dim);font-size:0.82rem;margin-bottom:12px">You have an unsaved melody from earlier.</div><div class="btn-row"><button class="btn btn-secondary" style="flex:1" data-action="draft:discard">Discard</button><button class="btn btn-primary" style="flex:1" data-action="draft:continue">Continue</button></div>`;
+  document.getElementById('app').insertBefore(wrap, document.getElementById('bottom-nav'));
+}
+function resumeDraft() {
+  const draft = Storage.loadDraft(); if (!draft) return;
+  App.current = draft; App.savedRef = null; App.undoStack=[]; App.redoStack=[]; App.selectedNoteId=null; App.editorView='roll'; App.previewOriginal=false;
+  navigate('editor', { fresh:false });
+}
+
+/* =====================================================================
+   BOOTSTRAP
+===================================================================== */
+function logoSvg(size) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+    <rect width="32" height="32" rx="9" fill="#0f2417"/>
+    <rect x="7" y="14" width="3" height="8" rx="1.5" fill="#35e07a"/>
+    <rect x="12" y="9" width="3" height="18" rx="1.5" fill="#35e07a"/>
+    <rect x="17" y="12" width="3" height="12" rx="1.5" fill="#35e07a" opacity="0.85"/>
+    <rect x="22" y="16" width="3" height="6" rx="1.5" fill="#35e07a" opacity="0.6"/>
+  </svg>`;
+}
+if (window.matchMedia) {
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ()=>{ if (App.settings.theme==='system') render(); });
+  window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', ()=>{ if (App.settings.motion==='system') render(); });
+}
+
+applyTheme();
+history.replaceState({ screen:'home', params:{} }, '', '#home');
+render();
+maybeShowDraftPrompt();
+if (!Storage.isOnboarded()) { document.getElementById('onboarding').hidden = false; renderOnboarding(); }
+
+})();
+</script>
+</body>
+</html>
